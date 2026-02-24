@@ -1,0 +1,20 @@
+{
+  "name": "PAH-16 asfaltklassificering",
+  "description": "Klassificering av asfalt baserad på totalhalt PAH-16. Vedertagen branschpraxis i Sverige för bedömning av tjärhalt i asfalt.",
+  "version": "2025.1",
+  "matrix": "asfalt",
+  "categories": ["Ren", "Förorenad", "Farligt avfall"],
+  "category_descriptions": {
+    "Ren": "PAH-16 < 70 mg/kg. Asfalt utan tjära, fri återanvändning.",
+    "Förorenad": "PAH-16 70-300 mg/kg. Asfalt med låg tjärhalt, begränsad återanvändning.",
+    "Farligt avfall": "PAH-16 > 300 mg/kg. Tjärasfalt, klassas som farligt avfall (avfallskod 17 03 01*)."
+  },
+  "rules": [
+    {
+      "substance": "pah_16",
+      "thresholds": { "Ren": "70", "Förorenad": "300" },
+      "unit": "mg/kg TS",
+      "note": "Branschpraxis baserad på Trafikverkets och SGI:s riktlinjer"
+    }
+  ]
+}

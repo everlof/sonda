@@ -1,0 +1,119 @@
+{
+  "name": "Naturvårdsverkets generella riktvärden",
+  "description": "Riktvärden för förorenad mark baserade på Naturvårdsverkets rapport 5976 (reviderad 2022). Används för att klassificera jord som KM (känslig markanvändning) eller MKM (mindre känslig markanvändning).",
+  "version": "2025.1",
+  "matrix": "jord",
+  "categories": ["KM", "MKM"],
+  "category_descriptions": {
+    "KM": "Känslig Markanvändning. Soil suitable for residential areas, schools, playgrounds. All substance concentrations must be below KM thresholds.",
+    "MKM": "Mindre Känslig Markanvändning. Soil suitable for industrial areas, roads, parking lots. All substance concentrations must be below MKM thresholds."
+  },
+  "rules": [
+    {
+      "substance": "arsenik",
+      "thresholds": { "KM": "10", "MKM": "25" },
+      "unit": "mg/kg TS",
+      "note": "NV rapport 5976"
+    },
+    {
+      "substance": "barium",
+      "thresholds": { "KM": "200", "MKM": "300" },
+      "unit": "mg/kg TS"
+    },
+    {
+      "substance": "bly",
+      "thresholds": { "KM": "50", "MKM": "180" },
+      "unit": "mg/kg TS",
+      "note": "MKM sänkt från 400 till 180 i 2022 revision"
+    },
+    {
+      "substance": "kadmium",
+      "thresholds": { "KM": "0.7", "MKM": "2.5" },
+      "unit": "mg/kg TS",
+      "note": "KM sänkt från 0.8 till 0.7 i 2022 revision"
+    },
+    {
+      "substance": "kobolt",
+      "thresholds": { "KM": "15", "MKM": "35" },
+      "unit": "mg/kg TS"
+    },
+    {
+      "substance": "koppar",
+      "thresholds": { "KM": "80", "MKM": "200" },
+      "unit": "mg/kg TS"
+    },
+    {
+      "substance": "krom_total",
+      "thresholds": { "KM": "80", "MKM": "150" },
+      "unit": "mg/kg TS"
+    },
+    {
+      "substance": "kvicksilver",
+      "thresholds": { "KM": "0.25", "MKM": "2.5" },
+      "unit": "mg/kg TS"
+    },
+    {
+      "substance": "nickel",
+      "thresholds": { "KM": "40", "MKM": "120" },
+      "unit": "mg/kg TS"
+    },
+    {
+      "substance": "vanadin",
+      "thresholds": { "KM": "100", "MKM": "200" },
+      "unit": "mg/kg TS"
+    },
+    {
+      "substance": "zink",
+      "thresholds": { "KM": "250", "MKM": "500" },
+      "unit": "mg/kg TS"
+    },
+    {
+      "substance": "bensen",
+      "thresholds": { "KM": "0.012", "MKM": "0.04" },
+      "unit": "mg/kg TS"
+    },
+    {
+      "substance": "alifater_c5_c8",
+      "thresholds": { "KM": "12", "MKM": "80" },
+      "unit": "mg/kg TS"
+    },
+    {
+      "substance": "alifater_c8_c10",
+      "thresholds": { "KM": "20", "MKM": "120" },
+      "unit": "mg/kg TS"
+    },
+    {
+      "substance": "alifater_c10_c12",
+      "thresholds": { "KM": "100", "MKM": "500" },
+      "unit": "mg/kg TS"
+    },
+    {
+      "substance": "alifater_c12_c16",
+      "thresholds": { "KM": "100", "MKM": "500" },
+      "unit": "mg/kg TS"
+    },
+    {
+      "substance": "alifater_c16_c35",
+      "thresholds": { "KM": "300", "MKM": "1000" },
+      "unit": "mg/kg TS"
+    },
+    {
+      "substance": "pah_l",
+      "thresholds": { "KM": "3", "MKM": "15" },
+      "unit": "mg/kg TS",
+      "note": "PAH med låg molekylvikt (naftalen, acenaftylen, acenaften, fluoren)"
+    },
+    {
+      "substance": "pah_m",
+      "thresholds": { "KM": "3", "MKM": "20" },
+      "unit": "mg/kg TS",
+      "note": "PAH med medelhög molekylvikt (fenantren, antracen, fluoranten, pyren)"
+    },
+    {
+      "substance": "pah_h",
+      "thresholds": { "KM": "1", "MKM": "10" },
+      "unit": "mg/kg TS",
+      "note": "PAH med hög molekylvikt (benso(a)antracen, krysen, benso(b)fluoranten, benso(k)fluoranten, benso(a)pyren, dibenso(ah)antracen, benso(ghi)perylen, indeno(123cd)pyren)"
+    }
+  ]
+}
