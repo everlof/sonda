@@ -2,6 +2,48 @@ use crate::model::AnalysisValue;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
+/// A substance's contribution to an HP criterion evaluation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HpSubstanceContribution {
+    /// Normalized substance name from the report.
+    pub substance: String,
+    /// CLP compound name (e.g., "As2O3").
+    pub compound: String,
+    /// Relevant H-code for this contribution.
+    pub h_code: String,
+    /// Concentration in % w/w.
+    pub concentration_pct: Decimal,
+    /// Applicable threshold in % w/w (for individual-limit criteria).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub threshold_pct: Option<Decimal>,
+    /// Whether this individual contribution triggered the criterion.
+    pub triggers: bool,
+}
+
+/// Evaluation result for a single HP criterion.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HpCriterionDetail {
+    /// HP identifier (e.g., "HP7", "HP14").
+    pub hp_id: String,
+    /// HP name (e.g., "Carcinogenic", "Ecotoxic").
+    pub hp_name: String,
+    /// Whether this criterion was triggered.
+    pub triggered: bool,
+    /// Human-readable reason for the result.
+    pub reason: String,
+    /// Substances that contributed to the evaluation.
+    pub contributions: Vec<HpSubstanceContribution>,
+}
+
+/// Full HP classification details.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HpDetails {
+    /// Whether the waste is classified as hazardous.
+    pub is_hazardous: bool,
+    /// Results for each evaluated HP criterion.
+    pub criteria_results: Vec<HpCriterionDetail>,
+}
+
 /// Classification result for a single substance against a single ruleset.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubstanceResult {
@@ -13,7 +55,7 @@ pub struct SubstanceResult {
     pub value: AnalysisValue,
     /// Unit string for display.
     pub unit: String,
-    /// The assigned category (e.g., "KM", "MKM"), or "exceeds_all".
+    /// The assigned category (e.g., "KM", "MKM"), or "> MKM" if all thresholds exceeded.
     pub category: String,
     /// Human-readable explanation of the classification.
     pub reason: String,
@@ -40,6 +82,9 @@ pub struct RuleSetResult {
     pub unmatched_substances: Vec<String>,
     /// Rules in the ruleset that had no matching substance in the report.
     pub unmatched_rules: Vec<String>,
+    /// HP classification details (present only for HP-based evaluation).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hp_details: Option<HpDetails>,
 }
 
 /// Classification result for a single sample (potentially multiple rulesets).

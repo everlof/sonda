@@ -4,21 +4,31 @@ use std::path::Path;
 pub fn list() -> Result<(), sonda_core::error::SondaError> {
     println!("Available predefined rulesets:\n");
     for name in builtin::PRESETS {
-        let rs = builtin::load_preset(name)?;
-        let matrix_info = match rs.matrix.as_deref() {
-            Some(m) => format!(" [{}]", m),
-            None => String::new(),
-        };
-        println!("  {:<8} {} (v{}){}", name, rs.name, rs.version, matrix_info);
-        if let Some(ref desc) = rs.description {
-            println!("           {}", desc);
+        if builtin::is_hp_preset(name) {
+            println!("  {:<8} Farligt avfall (HP-bedömning)", name);
+            println!("           CLP/HP-based hazardous waste classification per EU Regulation 1357/2014");
+            println!();
+        } else {
+            let rs = builtin::load_preset(name)?;
+            let matrix_info = match rs.matrix.as_deref() {
+                Some(m) => format!(" [{}]", m),
+                None => String::new(),
+            };
+            println!("  {:<8} {} (v{}){}", name, rs.name, rs.version, matrix_info);
+            if let Some(ref desc) = rs.description {
+                println!("           {}", desc);
+            }
+            println!();
         }
-        println!();
     }
     Ok(())
 }
 
 pub fn explain(preset: &str) -> Result<(), sonda_core::error::SondaError> {
+    if builtin::is_hp_preset(preset) {
+        return explain_fa();
+    }
+
     let rs = builtin::load_preset(preset)?;
 
     println!("{} (version {})\n", rs.name, rs.version);
@@ -88,6 +98,32 @@ pub fn explain(preset: &str) -> Result<(), sonda_core::error::SondaError> {
     }
 
     println!();
+
+    Ok(())
+}
+
+fn explain_fa() -> Result<(), sonda_core::error::SondaError> {
+    println!("Farligt avfall (HP-bedömning)\n");
+    println!("CLP/HP-based hazardous waste classification per EU Regulation 1357/2014");
+    println!("and Commission Regulation 2017/997 (HP14 ecotoxic).\n");
+    println!("This preset evaluates waste against the Hazardous Properties (HP) criteria.");
+    println!("Result is binary: FA (hazardous waste) or Icke FA (non-hazardous waste).\n");
+    println!("Evaluated HP criteria:\n");
+    println!("  HP4   Irritant              Summation: H315, H319 >= 20%");
+    println!("  HP5   STOT SE/RE            Individual: H370 >= 1%, H371 >= 10%");
+    println!("                              Summation: H372 >= 1%, H373 >= 10%");
+    println!("  HP6   Acute Toxicity        Summation per route and category");
+    println!("  HP7   Carcinogenic          Individual: H350 >= 0.1%, H351 >= 1%");
+    println!("  HP8   Corrosive             Summation: H314 >= 5%");
+    println!("  HP10  Toxic for repro.      Individual: H360 >= 0.3% (SCL: Pb 0.03%)");
+    println!("                              Individual: H361 >= 0.3%");
+    println!("  HP11  Mutagenic             Individual: H340 >= 0.1%, H341 >= 1%");
+    println!("  HP13  Sensitising           Individual: H317/H334 >= 10%");
+    println!("  HP14  Ecotoxic              Multiple summation checks with M-factors\n");
+    println!("Speciation: metals are converted to worst-case CLP compounds using");
+    println!("molecular weight conversion factors (e.g., As -> As2O3 x 1.32).");
+    println!("Concentrations are converted from mg/kg TS to % w/w (divide by 10000).\n");
+    println!("Below-detection values contribute 0 to summation checks.\n");
 
     Ok(())
 }
@@ -164,6 +200,9 @@ Example:
 
 Note: threshold values must be quoted strings, not bare numbers,
 to preserve exact decimal precision (e.g., "0.25" not 0.25).
+
+The "fa" preset uses the HP engine (not JSON thresholds). Use
+`sonda rules explain fa` for HP criteria details.
 "#
     );
     Ok(())

@@ -1,4 +1,5 @@
 pub mod engine;
+pub mod hp_engine;
 pub mod outcome;
 
 pub use engine::classify;

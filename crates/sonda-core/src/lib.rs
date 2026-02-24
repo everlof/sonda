@@ -1,4 +1,5 @@
 pub mod classify;
+pub mod clp;
 pub mod error;
 pub mod extraction;
 pub mod model;
@@ -11,6 +12,13 @@ use extraction::PdfExtractor;
 use model::{AnalysisReport, Matrix};
 use rules::schema::RuleSetDef;
 
+/// Options controlling which classification engines to run.
+#[derive(Debug, Clone, Default)]
+pub struct ClassifyOptions {
+    /// Run HP-based hazardous waste (FA) classification.
+    pub include_hp: bool,
+}
+
 /// Main API entry point: classify a PDF report against one or more rulesets.
 ///
 /// Handles multi-sample PDFs by splitting and classifying each sample
@@ -19,6 +27,7 @@ pub fn classify_pdf(
     pdf_bytes: &[u8],
     extractor: &dyn PdfExtractor,
     rulesets: &[RuleSetDef],
+    options: &ClassifyOptions,
 ) -> Result<ClassificationResult, SondaError> {
     // Extract text from PDF
     let pages = extractor.extract_pages(pdf_bytes)?;
@@ -40,7 +49,7 @@ pub fn classify_pdf(
     // Classify each sample
     let mut samples = Vec::new();
     for report in &reports {
-        let sample_result = classify_sample(report, rulesets)?;
+        let sample_result = classify_sample(report, rulesets, options)?;
         samples.push(sample_result);
     }
 
@@ -51,6 +60,7 @@ pub fn classify_pdf(
 fn classify_sample(
     report: &AnalysisReport,
     rulesets: &[RuleSetDef],
+    options: &ClassifyOptions,
 ) -> Result<SampleResult, SondaError> {
     // Build sample ID from header
     let sample_id = report
@@ -60,25 +70,49 @@ fn classify_sample(
         .or_else(|| report.header.lab_report_id.clone())
         .unwrap_or_else(|| "unknown".into());
 
-    // Filter rulesets by matrix
-    let applicable: Vec<&RuleSetDef> = rulesets
-        .iter()
-        .filter(|rs| match rs.matrix.as_deref() {
-            None => true,
-            Some(ruleset_matrix) => match &report.header.matrix {
-                Some(report_matrix) => {
-                    let rm = ruleset_matrix.to_lowercase();
-                    match report_matrix {
-                        Matrix::Jord => rm == "jord",
-                        Matrix::Asfalt => rm == "asfalt",
-                    }
-                }
-                None => false,
-            },
-        })
-        .collect();
+    let mut ruleset_results = Vec::new();
 
-    if applicable.is_empty() {
+    // Run threshold-based classification if we have applicable rulesets
+    if !rulesets.is_empty() {
+        let applicable: Vec<&RuleSetDef> = rulesets
+            .iter()
+            .filter(|rs| match rs.matrix.as_deref() {
+                None => true,
+                Some(ruleset_matrix) => match &report.header.matrix {
+                    Some(report_matrix) => {
+                        let rm = ruleset_matrix.to_lowercase();
+                        match report_matrix {
+                            Matrix::Jord => rm == "jord",
+                            Matrix::Asfalt => rm == "asfalt",
+                        }
+                    }
+                    None => false,
+                },
+            })
+            .collect();
+
+        if applicable.is_empty() && !options.include_hp {
+            let matrix_str = report
+                .header
+                .matrix
+                .as_ref()
+                .map(|m| m.to_string())
+                .unwrap_or_else(|| "unknown".into());
+            return Err(SondaError::MatrixMismatch { matrix: matrix_str });
+        }
+
+        let applicable_owned: Vec<RuleSetDef> = applicable.into_iter().cloned().collect();
+        let threshold_results = classify::classify(report, &applicable_owned);
+        ruleset_results.extend(threshold_results);
+    }
+
+    // Run HP-based classification if requested
+    if options.include_hp {
+        let hp_result = classify::hp_engine::classify_hp(report);
+        ruleset_results.push(hp_result);
+    }
+
+    if ruleset_results.is_empty() {
         let matrix_str = report
             .header
             .matrix
@@ -88,11 +122,8 @@ fn classify_sample(
         return Err(SondaError::MatrixMismatch { matrix: matrix_str });
     }
 
-    let applicable_owned: Vec<RuleSetDef> = applicable.into_iter().cloned().collect();
-    let result = classify::classify(report, &applicable_owned);
-
     Ok(SampleResult {
         sample_id,
-        ruleset_results: result,
+        ruleset_results,
     })
 }

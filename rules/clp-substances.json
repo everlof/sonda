@@ -1,0 +1,232 @@
+{
+  "version": "2025.1",
+  "description": "CLP harmonised classifications for substances relevant to soil/asphalt waste classification. Source: ECHA Annex VI Table 3.1 (CLP Regulation 1272/2008).",
+  "substances": {
+    "1327-53-3": {
+      "name": "As2O3 (diarsentrioxid)",
+      "hazard_classes": [
+        { "class": "Carc.", "category": "1A", "h_code": "H350" },
+        { "class": "Acute Tox.", "category": "3", "h_code": "H301", "route": "oral" },
+        { "class": "Acute Tox.", "category": "3", "h_code": "H331", "route": "inhalation" },
+        { "class": "Aquatic Acute", "category": "1", "h_code": "H400" },
+        { "class": "Aquatic Chronic", "category": "1", "h_code": "H410" }
+      ],
+      "m_factors": { "acute": null, "chronic": null },
+      "scls": {}
+    },
+    "1306-19-0": {
+      "name": "CdO (kadmiumoxid)",
+      "hazard_classes": [
+        { "class": "Carc.", "category": "1B", "h_code": "H350" },
+        { "class": "Muta.", "category": "2", "h_code": "H341" },
+        { "class": "Repr.", "category": "2", "h_code": "H361fd" },
+        { "class": "Acute Tox.", "category": "2", "h_code": "H330", "route": "inhalation" },
+        { "class": "STOT RE", "category": "1", "h_code": "H372" },
+        { "class": "Aquatic Acute", "category": "1", "h_code": "H400" },
+        { "class": "Aquatic Chronic", "category": "1", "h_code": "H410" }
+      ],
+      "m_factors": { "acute": null, "chronic": null },
+      "scls": {}
+    },
+    "1333-82-0": {
+      "name": "CrO3 (kromtrioxid)",
+      "hazard_classes": [
+        { "class": "Carc.", "category": "1A", "h_code": "H350" },
+        { "class": "Muta.", "category": "1B", "h_code": "H340" },
+        { "class": "Acute Tox.", "category": "3", "h_code": "H301", "route": "oral" },
+        { "class": "Acute Tox.", "category": "2", "h_code": "H330", "route": "inhalation" },
+        { "class": "Acute Tox.", "category": "3", "h_code": "H311", "route": "dermal" },
+        { "class": "STOT RE", "category": "1", "h_code": "H372" },
+        { "class": "Skin Corr.", "category": "1A", "h_code": "H314" },
+        { "class": "Resp. Sens.", "category": "1", "h_code": "H334" },
+        { "class": "Aquatic Acute", "category": "1", "h_code": "H400" },
+        { "class": "Aquatic Chronic", "category": "1", "h_code": "H410" }
+      ],
+      "m_factors": { "acute": null, "chronic": null },
+      "scls": {}
+    },
+    "1317-39-1": {
+      "name": "Cu2O (koppar(I)oxid)",
+      "hazard_classes": [
+        { "class": "Aquatic Acute", "category": "1", "h_code": "H400" },
+        { "class": "Aquatic Chronic", "category": "1", "h_code": "H410" }
+      ],
+      "m_factors": { "acute": "100", "chronic": "1" },
+      "scls": {}
+    },
+    "7439-92-1": {
+      "name": "Pb (bly och oorganiska blyföreningar)",
+      "hazard_classes": [
+        { "class": "Repr.", "category": "1A", "h_code": "H360FD" },
+        { "class": "Lact.", "category": "", "h_code": "H362" },
+        { "class": "Aquatic Acute", "category": "1", "h_code": "H400" },
+        { "class": "Aquatic Chronic", "category": "1", "h_code": "H410" }
+      ],
+      "m_factors": { "acute": null, "chronic": null },
+      "scls": {
+        "Repr.1A": "0.03"
+      }
+    },
+    "7487-94-7": {
+      "name": "HgCl2 (kvicksilver(II)klorid)",
+      "hazard_classes": [
+        { "class": "Acute Tox.", "category": "2", "h_code": "H300", "route": "oral" },
+        { "class": "Acute Tox.", "category": "1", "h_code": "H310", "route": "dermal" },
+        { "class": "Acute Tox.", "category": "2", "h_code": "H330", "route": "inhalation" },
+        { "class": "STOT RE", "category": "1", "h_code": "H372" },
+        { "class": "Skin Corr.", "category": "1B", "h_code": "H314" },
+        { "class": "Aquatic Acute", "category": "1", "h_code": "H400" },
+        { "class": "Aquatic Chronic", "category": "1", "h_code": "H410" }
+      ],
+      "m_factors": { "acute": null, "chronic": null },
+      "scls": {}
+    },
+    "7786-81-4": {
+      "name": "NiSO4 (nickelsulfat)",
+      "hazard_classes": [
+        { "class": "Carc.", "category": "1A", "h_code": "H350i" },
+        { "class": "Muta.", "category": "2", "h_code": "H341" },
+        { "class": "Repr.", "category": "1B", "h_code": "H360D" },
+        { "class": "Acute Tox.", "category": "4", "h_code": "H302", "route": "oral" },
+        { "class": "Acute Tox.", "category": "4", "h_code": "H332", "route": "inhalation" },
+        { "class": "Skin Sens.", "category": "1", "h_code": "H317" },
+        { "class": "Aquatic Acute", "category": "1", "h_code": "H400" },
+        { "class": "Aquatic Chronic", "category": "1", "h_code": "H410" }
+      ],
+      "m_factors": { "acute": null, "chronic": null },
+      "scls": {}
+    },
+    "1314-13-2": {
+      "name": "ZnO (zinkoxid)",
+      "hazard_classes": [
+        { "class": "Aquatic Acute", "category": "1", "h_code": "H400" },
+        { "class": "Aquatic Chronic", "category": "1", "h_code": "H410" }
+      ],
+      "m_factors": { "acute": "10", "chronic": "1" },
+      "scls": {}
+    },
+    "10361-37-2": {
+      "name": "BaCl2 (bariumklorid)",
+      "hazard_classes": [
+        { "class": "Acute Tox.", "category": "3", "h_code": "H301", "route": "oral" },
+        { "class": "Acute Tox.", "category": "4", "h_code": "H332", "route": "inhalation" }
+      ],
+      "m_factors": { "acute": null, "chronic": null },
+      "scls": {}
+    },
+    "7646-79-9": {
+      "name": "CoCl2 (koboltklorid)",
+      "hazard_classes": [
+        { "class": "Carc.", "category": "1B", "h_code": "H350i" },
+        { "class": "Muta.", "category": "2", "h_code": "H341" },
+        { "class": "Repr.", "category": "1B", "h_code": "H360F" },
+        { "class": "Acute Tox.", "category": "4", "h_code": "H302", "route": "oral" },
+        { "class": "Resp. Sens.", "category": "1", "h_code": "H334" },
+        { "class": "Skin Sens.", "category": "1", "h_code": "H317" },
+        { "class": "Aquatic Acute", "category": "1", "h_code": "H400" },
+        { "class": "Aquatic Chronic", "category": "1", "h_code": "H410" }
+      ],
+      "m_factors": { "acute": null, "chronic": null },
+      "scls": {}
+    },
+    "1314-62-1": {
+      "name": "V2O5 (vanadinpentoxid)",
+      "hazard_classes": [
+        { "class": "Carc.", "category": "2", "h_code": "H351" },
+        { "class": "Muta.", "category": "2", "h_code": "H341" },
+        { "class": "Repr.", "category": "2", "h_code": "H361d" },
+        { "class": "Acute Tox.", "category": "4", "h_code": "H302", "route": "oral" },
+        { "class": "Acute Tox.", "category": "4", "h_code": "H332", "route": "inhalation" },
+        { "class": "STOT RE", "category": "1", "h_code": "H372" }
+      ],
+      "m_factors": { "acute": null, "chronic": null },
+      "scls": {}
+    },
+    "91-20-3": {
+      "name": "Naftalen",
+      "hazard_classes": [
+        { "class": "Carc.", "category": "2", "h_code": "H351" },
+        { "class": "Acute Tox.", "category": "4", "h_code": "H302", "route": "oral" },
+        { "class": "Aquatic Acute", "category": "1", "h_code": "H400" },
+        { "class": "Aquatic Chronic", "category": "1", "h_code": "H410" }
+      ],
+      "m_factors": { "acute": null, "chronic": null },
+      "scls": {}
+    },
+    "56-55-3": {
+      "name": "Benso(a)antracen",
+      "hazard_classes": [
+        { "class": "Carc.", "category": "1B", "h_code": "H350" },
+        { "class": "Aquatic Acute", "category": "1", "h_code": "H400" },
+        { "class": "Aquatic Chronic", "category": "1", "h_code": "H410" }
+      ],
+      "m_factors": { "acute": null, "chronic": null },
+      "scls": {}
+    },
+    "218-01-9": {
+      "name": "Krysen",
+      "hazard_classes": [
+        { "class": "Carc.", "category": "1B", "h_code": "H350" },
+        { "class": "Muta.", "category": "2", "h_code": "H341" },
+        { "class": "Aquatic Acute", "category": "1", "h_code": "H400" },
+        { "class": "Aquatic Chronic", "category": "1", "h_code": "H410" }
+      ],
+      "m_factors": { "acute": null, "chronic": null },
+      "scls": {}
+    },
+    "205-99-2": {
+      "name": "Benso(b)fluoranten",
+      "hazard_classes": [
+        { "class": "Carc.", "category": "1B", "h_code": "H350" },
+        { "class": "Aquatic Acute", "category": "1", "h_code": "H400" },
+        { "class": "Aquatic Chronic", "category": "1", "h_code": "H410" }
+      ],
+      "m_factors": { "acute": null, "chronic": null },
+      "scls": {}
+    },
+    "207-08-9": {
+      "name": "Benso(k)fluoranten",
+      "hazard_classes": [
+        { "class": "Carc.", "category": "1B", "h_code": "H350" },
+        { "class": "Aquatic Acute", "category": "1", "h_code": "H400" },
+        { "class": "Aquatic Chronic", "category": "1", "h_code": "H410" }
+      ],
+      "m_factors": { "acute": null, "chronic": null },
+      "scls": {}
+    },
+    "50-32-8": {
+      "name": "Benso(a)pyren",
+      "hazard_classes": [
+        { "class": "Carc.", "category": "1B", "h_code": "H350" },
+        { "class": "Muta.", "category": "1B", "h_code": "H340" },
+        { "class": "Repr.", "category": "1B", "h_code": "H360FD" },
+        { "class": "Skin Sens.", "category": "1", "h_code": "H317" },
+        { "class": "Aquatic Acute", "category": "1", "h_code": "H400" },
+        { "class": "Aquatic Chronic", "category": "1", "h_code": "H410" }
+      ],
+      "m_factors": { "acute": null, "chronic": null },
+      "scls": {}
+    },
+    "53-70-3": {
+      "name": "Dibenso(a,h)antracen",
+      "hazard_classes": [
+        { "class": "Carc.", "category": "1B", "h_code": "H350" },
+        { "class": "Aquatic Acute", "category": "1", "h_code": "H400" },
+        { "class": "Aquatic Chronic", "category": "1", "h_code": "H410" }
+      ],
+      "m_factors": { "acute": null, "chronic": null },
+      "scls": {}
+    },
+    "120-12-7": {
+      "name": "Antracen",
+      "hazard_classes": [
+        { "class": "Skin Irrit.", "category": "2", "h_code": "H315" },
+        { "class": "Eye Irrit.", "category": "2A", "h_code": "H319" },
+        { "class": "Aquatic Acute", "category": "1", "h_code": "H400" },
+        { "class": "Aquatic Chronic", "category": "1", "h_code": "H410" }
+      ],
+      "m_factors": { "acute": null, "chronic": null },
+      "scls": {}
+    }
+  }
+}

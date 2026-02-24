@@ -1,0 +1,93 @@
+{
+  "version": "2025.1",
+  "description": "Speciation assumptions mapping lab-reported elemental metals to worst-case CLP compounds, and PAH direct CAS mappings. Based on EU Technical Guidance 2018/C 124/01.",
+  "metals": [
+    {
+      "substance": "arsenik",
+      "compound": "As2O3",
+      "cas": "1327-53-3",
+      "conversion_factor": "1.32",
+      "conversion_note": "MW(As2O3) / (2 × MW(As)) = 197.84 / (2 × 74.92) = 1.32"
+    },
+    {
+      "substance": "kadmium",
+      "compound": "CdO",
+      "cas": "1306-19-0",
+      "conversion_factor": "1.14",
+      "conversion_note": "MW(CdO) / MW(Cd) = 128.41 / 112.41 = 1.14"
+    },
+    {
+      "substance": "krom_total",
+      "compound": "CrO3",
+      "cas": "1333-82-0",
+      "conversion_factor": "1.92",
+      "conversion_note": "MW(CrO3) / MW(Cr) = 99.99 / 52.00 = 1.92"
+    },
+    {
+      "substance": "koppar",
+      "compound": "Cu2O",
+      "cas": "1317-39-1",
+      "conversion_factor": "1.13",
+      "conversion_note": "MW(Cu2O) / (2 × MW(Cu)) = 143.09 / (2 × 63.55) = 1.13"
+    },
+    {
+      "substance": "bly",
+      "compound": "Pb (group entry)",
+      "cas": "7439-92-1",
+      "conversion_factor": "1.00",
+      "conversion_note": "Lead group entry: expressed as Pb equivalent, no conversion needed"
+    },
+    {
+      "substance": "kvicksilver",
+      "compound": "HgCl2",
+      "cas": "7487-94-7",
+      "conversion_factor": "1.35",
+      "conversion_note": "MW(HgCl2) / MW(Hg) = 271.52 / 200.59 = 1.35"
+    },
+    {
+      "substance": "nickel",
+      "compound": "NiSO4",
+      "cas": "7786-81-4",
+      "conversion_factor": "2.64",
+      "conversion_note": "MW(NiSO4) / MW(Ni) = 154.75 / 58.69 = 2.64"
+    },
+    {
+      "substance": "zink",
+      "compound": "ZnO",
+      "cas": "1314-13-2",
+      "conversion_factor": "1.24",
+      "conversion_note": "MW(ZnO) / MW(Zn) = 81.38 / 65.38 = 1.24"
+    },
+    {
+      "substance": "barium",
+      "compound": "BaCl2",
+      "cas": "10361-37-2",
+      "conversion_factor": "1.52",
+      "conversion_note": "MW(BaCl2) / MW(Ba) = 208.23 / 137.33 = 1.52"
+    },
+    {
+      "substance": "kobolt",
+      "compound": "CoCl2",
+      "cas": "7646-79-9",
+      "conversion_factor": "2.20",
+      "conversion_note": "MW(CoCl2) / MW(Co) = 129.84 / 58.93 = 2.20"
+    },
+    {
+      "substance": "vanadin",
+      "compound": "V2O5",
+      "cas": "1314-62-1",
+      "conversion_factor": "1.78",
+      "conversion_note": "MW(V2O5) / (2 × MW(V)) = 181.88 / (2 × 50.94) = 1.78"
+    }
+  ],
+  "pah_direct": [
+    { "substance": "naftalen", "cas": "91-20-3" },
+    { "substance": "benso_a_antracen", "cas": "56-55-3" },
+    { "substance": "krysen", "cas": "218-01-9" },
+    { "substance": "benso_b_fluoranten", "cas": "205-99-2" },
+    { "substance": "benso_k_fluoranten", "cas": "207-08-9" },
+    { "substance": "benso_a_pyren", "cas": "50-32-8" },
+    { "substance": "dibenso_a_h_antracen", "cas": "53-70-3" },
+    { "substance": "antracen", "cas": "120-12-7" }
+  ]
+}

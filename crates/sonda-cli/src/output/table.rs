@@ -14,6 +14,13 @@ pub fn print(result: &ClassificationResult, show_all: bool, verbose: bool) {
         for rs_result in &sample.ruleset_results {
             println!("=== {} ===\n", rs_result.ruleset_name);
 
+            // HP-based output
+            if let Some(ref hp) = rs_result.hp_details {
+                print_hp_result(rs_result, hp, verbose);
+                continue;
+            }
+
+            // Threshold-based output (existing logic)
             // Overall classification
             println!(
                 "  Overall: {} ({})\n",
@@ -77,9 +84,13 @@ pub fn print(result: &ClassificationResult, show_all: bool, verbose: bool) {
                     println!("  Determining substances:");
                     for sr in &exceedances {
                         let uncertain_marker = if sr.uncertain { " (?)" } else { "" };
+                        let threshold_info = match sr.exceeded_threshold {
+                            Some(t) => format!("{} > {} {}", sr.value, t, sr.unit),
+                            None => format!("{} {}", sr.value, sr.unit),
+                        };
                         println!(
-                            "    {} -> {}{}  ({} {})",
-                            sr.raw_name, sr.category, uncertain_marker, sr.value, sr.unit
+                            "    {} -> {}{}  ({})",
+                            sr.raw_name, sr.category, uncertain_marker, threshold_info
                         );
                     }
                     println!();
@@ -102,6 +113,102 @@ pub fn print(result: &ClassificationResult, show_all: bool, verbose: bool) {
                 }
                 println!();
             }
+        }
+    }
+}
+
+fn print_hp_result(
+    rs_result: &sonda_core::classify::outcome::RuleSetResult,
+    hp: &sonda_core::classify::outcome::HpDetails,
+    verbose: bool,
+) {
+    // Overall classification
+    let triggered_ids: Vec<&str> = hp
+        .criteria_results
+        .iter()
+        .filter(|c| c.triggered)
+        .map(|c| c.hp_id.as_str())
+        .collect();
+
+    if hp.is_hazardous {
+        println!(
+            "  Overall: {} (triggered by {})\n",
+            rs_result.overall_category,
+            triggered_ids.join(", ")
+        );
+    } else {
+        println!("  Overall: {}\n", rs_result.overall_category);
+    }
+
+    if verbose {
+        // Verbose: show all criteria with details
+        for cr in &hp.criteria_results {
+            let status = if cr.triggered {
+                "TRIGGERED"
+            } else {
+                "not triggered"
+            };
+            println!("  {} ({}): {}", cr.hp_id, cr.hp_name, status);
+
+            if !cr.contributions.is_empty() {
+                for c in &cr.contributions {
+                    let trigger_marker = if c.triggers { " ***" } else { "" };
+                    if let Some(threshold) = c.threshold_pct {
+                        let comparison = if c.triggers { ">=" } else { "<" };
+                        println!(
+                            "    {} -> {} ({}): {:.4}% {} {}%{}",
+                            c.substance,
+                            c.compound,
+                            c.h_code,
+                            c.concentration_pct,
+                            comparison,
+                            threshold,
+                            trigger_marker,
+                        );
+                    } else {
+                        println!(
+                            "    {} -> {} ({}): {:.4}%{}",
+                            c.substance, c.compound, c.h_code, c.concentration_pct, trigger_marker,
+                        );
+                    }
+                }
+            }
+            println!();
+        }
+    } else {
+        // Non-verbose: only show triggered criteria
+        if hp.is_hazardous {
+            println!("  Triggered HP criteria:");
+            for cr in &hp.criteria_results {
+                if !cr.triggered {
+                    continue;
+                }
+                // Show the triggering contributions
+                let triggering: Vec<String> = cr
+                    .contributions
+                    .iter()
+                    .filter(|c| c.triggers)
+                    .map(|c| {
+                        if let Some(threshold) = c.threshold_pct {
+                            format!(
+                                "{} ({}): {:.4}% >= {}%",
+                                c.compound, c.h_code, c.concentration_pct, threshold
+                            )
+                        } else {
+                            format!("{} ({}): {:.4}%", c.compound, c.h_code, c.concentration_pct)
+                        }
+                    })
+                    .collect();
+
+                let details = if triggering.is_empty() {
+                    cr.reason.clone()
+                } else {
+                    triggering.join(", ")
+                };
+
+                println!("    {:<5} {:<25} {}", cr.hp_id, cr.hp_name, details);
+            }
+            println!();
         }
     }
 }

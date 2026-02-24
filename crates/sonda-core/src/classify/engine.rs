@@ -91,6 +91,7 @@ fn classify_one(report: &AnalysisReport, ruleset: &RuleSetDef) -> RuleSetResult 
         substance_results,
         unmatched_substances,
         unmatched_rules,
+        hp_details: None,
     }
 }
 
@@ -174,6 +175,9 @@ fn classify_measured(
     }
 
     // Exceeds all thresholds
+    let last_cat = categories.last().cloned().unwrap_or_default();
+    let exceeds_cat = format!("> {}", last_cat);
+
     let threshold_parts: Vec<String> = categories
         .iter()
         .filter_map(|cat| rule.thresholds.get(cat).map(|t| format!("{}:{}", cat, t)))
@@ -189,7 +193,7 @@ fn classify_measured(
         raw_name: row.raw_name.clone(),
         value: row.value.clone(),
         unit: unit.to_string(),
-        category: "exceeds_all".to_string(),
+        category: exceeds_cat,
         reason: format!(
             "{}: {} {} > {} -> exceeds all thresholds",
             row.raw_name,
@@ -285,11 +289,11 @@ fn determine_overall(
 
     // Find the worst category index
     let mut worst_idx: Option<usize> = None;
-    let mut exceeds_all = false;
+    let mut has_exceeds = false;
 
     for r in results {
-        if r.category == "exceeds_all" {
-            exceeds_all = true;
+        if r.category.starts_with("> ") {
+            has_exceeds = true;
             break;
         }
         if let Some(idx) = categories.iter().position(|c| *c == r.category) {
@@ -304,17 +308,16 @@ fn determine_overall(
         }
     }
 
-    if exceeds_all {
+    if has_exceeds {
+        let last_cat = categories.last().cloned().unwrap_or_default();
+        let exceeds_cat = format!("> {}", last_cat);
         let determining: Vec<String> = results
             .iter()
-            .filter(|r| r.category == "exceeds_all")
+            .filter(|r| r.category.starts_with("> "))
             .map(|r| r.raw_name.clone())
             .collect();
-        let reason = format!(
-            "Exceeds all thresholds (determined by {})",
-            determining.join(", ")
-        );
-        return ("exceeds_all".to_string(), reason, determining);
+        let reason = format!("Determined by {}", determining.join(", "));
+        return (exceeds_cat, reason, determining);
     }
 
     let worst = worst_idx.unwrap_or(0);
@@ -444,7 +447,7 @@ mod tests {
         )]);
         let result = classify(&report, &[make_ruleset()]);
         let rs = &result[0];
-        assert_eq!(rs.overall_category, "exceeds_all");
+        assert_eq!(rs.overall_category, "> MKM");
     }
 
     #[test]
