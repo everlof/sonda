@@ -3,6 +3,7 @@ use crate::extraction::PageContent;
 use crate::model::{AnalysisRow, AnalysisValue};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 
 pub const TRACE_SCHEMA_VERSION: &str = "1.0";
 
@@ -160,29 +161,102 @@ pub fn build_entry_trace(
 
 fn find_row_spans(pages: &[PageContent], row: &AnalysisRow) -> Vec<EvidenceSpan> {
     let mut spans = Vec::new();
-    let value_text = row.value.to_string();
+    let mut seen: HashSet<(usize, usize)> = HashSet::new();
+    let name_key = normalize_ws_lower(&row.raw_name);
+    let value_key = compact_for_value_match(&row.value.to_string());
+    let has_any_name_match = pages.iter().any(|page| {
+        page.line_spans
+            .iter()
+            .any(|span| normalize_ws_lower(&span.text).contains(&name_key))
+    });
 
     for page in pages {
-        for span in &page.line_spans {
-            let line_lower = span.text.to_lowercase();
-            let name_match = line_lower.contains(&row.raw_name.to_lowercase());
-            let value_match = span.text.contains(&value_text);
+        let name_candidates: Vec<_> = page
+            .line_spans
+            .iter()
+            .filter(|span| normalize_ws_lower(&span.text).contains(&name_key))
+            .collect();
 
-            if name_match || value_match {
-                spans.push(EvidenceSpan {
-                    page_number: span.page_number,
-                    line_index: span.line_index,
-                    matched_text: span.text.clone(),
-                    x_min: span.bbox.x_min,
-                    y_min: span.bbox.y_min,
-                    x_max: span.bbox.x_max,
-                    y_max: span.bbox.y_max,
-                });
+        if !name_candidates.is_empty() {
+            for name_span in name_candidates {
+                push_span_unique(&mut spans, &mut seen, name_span);
+
+                if let Some(value_span) = nearest_value_span(page, name_span, &value_key) {
+                    push_span_unique(&mut spans, &mut seen, value_span);
+                }
+            }
+            continue;
+        }
+
+        // Conservative fallback only when name never matched anywhere.
+        // Prevents false hits like serial numbers that happen to contain e.g. "19".
+        if !has_any_name_match {
+            if let Some(value_span) = page.line_spans.iter().find(|span| {
+                is_value_like_line(&span.text)
+                    && compact_for_value_match(&span.text).contains(&value_key)
+            }) {
+                push_span_unique(&mut spans, &mut seen, value_span);
             }
         }
     }
 
     spans
+}
+
+fn nearest_value_span<'a>(
+    page: &'a PageContent,
+    anchor: &'a crate::extraction::LineSpan,
+    value_key: &str,
+) -> Option<&'a crate::extraction::LineSpan> {
+    page.line_spans
+        .iter()
+        .filter(|span| compact_for_value_match(&span.text).contains(value_key))
+        .min_by(|a, b| {
+            let da = (a.bbox.y_min - anchor.bbox.y_min).abs();
+            let db = (b.bbox.y_min - anchor.bbox.y_min).abs();
+            da.total_cmp(&db)
+        })
+}
+
+fn push_span_unique(
+    out: &mut Vec<EvidenceSpan>,
+    seen: &mut HashSet<(usize, usize)>,
+    span: &crate::extraction::LineSpan,
+) {
+    let key = (span.page_number, span.line_index);
+    if !seen.insert(key) {
+        return;
+    }
+    out.push(EvidenceSpan {
+        page_number: span.page_number,
+        line_index: span.line_index,
+        matched_text: span.text.clone(),
+        x_min: span.bbox.x_min,
+        y_min: span.bbox.y_min,
+        x_max: span.bbox.x_max,
+        y_max: span.bbox.y_max,
+    });
+}
+
+fn normalize_ws_lower(s: &str) -> String {
+    s.to_lowercase()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+fn compact_for_value_match(s: &str) -> String {
+    s.chars().filter(|c| !c.is_whitespace()).collect::<String>()
+}
+
+fn is_value_like_line(s: &str) -> bool {
+    let compact = compact_for_value_match(s);
+    if compact.is_empty() {
+        return false;
+    }
+    compact
+        .chars()
+        .all(|c| c.is_ascii_digit() || matches!(c, '<' | '>' | '=' | '.' | ',' | '-'))
 }
 
 pub fn build_ruleset_decisions(
