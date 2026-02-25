@@ -9,11 +9,24 @@ use header::parse_header;
 use normalize::normalize_substance;
 use values::parse_value;
 
+#[derive(Debug, Clone)]
+pub struct ParseWarning {
+    pub section_index: usize,
+    pub sample_id: Option<String>,
+    pub reason: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct ParsedReports {
+    pub reports: Vec<AnalysisReport>,
+    pub warnings: Vec<ParseWarning>,
+}
+
 /// Parse extracted page content into one or more AnalysisReports.
 ///
 /// Multi-sample PDFs (where multiple "Analysrapport" sections appear)
 /// are split into separate reports, each classified independently.
-pub fn parse_reports(pages: &[PageContent]) -> Result<Vec<AnalysisReport>, SondaError> {
+pub fn parse_reports(pages: &[PageContent]) -> Result<ParsedReports, SondaError> {
     let all_lines: Vec<&str> = pages
         .iter()
         .flat_map(|p| p.lines.iter().map(|s| s.as_str()))
@@ -29,11 +42,24 @@ pub fn parse_reports(pages: &[PageContent]) -> Result<Vec<AnalysisReport>, Sonda
     let sections = split_into_sections(&all_lines);
 
     let mut reports = Vec::new();
-    for section in &sections {
+    let mut warnings = Vec::new();
+    for (idx, section) in sections.iter().enumerate() {
         match parse_section(section) {
             Ok(report) => reports.push(report),
-            Err(_) => {
-                // Skip sections that don't parse (e.g., cover pages)
+            Err(err) => {
+                // Keep parsing remaining sections and surface explicit warnings.
+                let header_lines: Vec<&str> = section.iter().take(30).copied().collect();
+                let header = parse_header(&header_lines);
+                let sample_id = header.sample_id.or(header.lab_report_id);
+                let reason = match err {
+                    SondaError::ParseError(msg) => msg,
+                    other => other.to_string(),
+                };
+                warnings.push(ParseWarning {
+                    section_index: idx + 1,
+                    sample_id,
+                    reason,
+                });
                 continue;
             }
         }
@@ -45,7 +71,7 @@ pub fn parse_reports(pages: &[PageContent]) -> Result<Vec<AnalysisReport>, Sonda
         ));
     }
 
-    Ok(reports)
+    Ok(ParsedReports { reports, warnings })
 }
 
 /// Split lines into sections, each starting at an "Analysrapport" header.

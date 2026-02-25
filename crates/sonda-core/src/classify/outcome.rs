@@ -74,6 +74,9 @@ pub struct RuleSetResult {
     pub overall_category: String,
     /// Human-readable explanation of the overall classification.
     pub overall_reason: String,
+    /// The cleanest category in this ruleset (used for summary rendering).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub lowest_category: Option<String>,
     /// Substance(s) that determined the overall classification.
     pub determining_substances: Vec<String>,
     /// Per-substance results.
@@ -85,6 +88,16 @@ pub struct RuleSetResult {
     /// HP classification details (present only for HP-based evaluation).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hp_details: Option<HpDetails>,
+}
+
+/// Warning generated during parsing/classification.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ParseWarning {
+    /// Sample identifier if available.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sample_id: Option<String>,
+    /// Human-readable warning message.
+    pub message: String,
 }
 
 /// Classification result for a single sample (potentially multiple rulesets).
@@ -100,4 +113,6 @@ pub struct SampleResult {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClassificationResult {
     pub samples: Vec<SampleResult>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub warnings: Vec<ParseWarning>,
 }

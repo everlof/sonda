@@ -87,6 +87,7 @@ fn classify_one(report: &AnalysisReport, ruleset: &RuleSetDef) -> RuleSetResult 
         ruleset_name: ruleset.name.clone(),
         overall_category,
         overall_reason,
+        lowest_category: ruleset.categories.first().cloned(),
         determining_substances: determining,
         substance_results,
         unmatched_substances,

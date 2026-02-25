@@ -26,13 +26,13 @@ sonda classify report.pdf --show-all --verbose
 ```
 sonda classify <PDF_FILE> [OPTIONS]
     -r, --rules <FILE>     Custom JSON rule file(s)
-    -p, --preset <NAME>    Predefined ruleset (default: nv)
+    -p, --preset <NAME>    Predefined ruleset(s) (default: all presets)
     -o, --output <FORMAT>  table (default) or json
     --show-all             Show all substances, not just exceedances
     --verbose              Show detailed per-substance reasoning
 ```
 
-When no `--preset` or `--rules` is given, defaults to the NV riktvärden preset.
+When no `--preset` or `--rules` is given, all built-in presets are run (`nv`, `asfalt`, `fa`).
 
 ### rules
 
@@ -48,8 +48,8 @@ sonda rules validate <FILE>   Validate a custom rule file
 | Preset | Name | Categories |
 |--------|------|------------|
 | `nv` | Naturvårdsverkets generella riktvärden (2025.1) | KM, MKM |
-
-FA and IFA presets are planned for Phase 2.
+| `asfalt` | PAH-16 asfaltklassificering (2025.1) | Ren, Förorenad, Farligt avfall |
+| `fa` | Farligt avfall (HP-bedömning) | FA, Icke FA |
 
 ## Custom Rules
 

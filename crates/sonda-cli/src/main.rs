@@ -26,7 +26,7 @@ enum Commands {
         #[arg(short, long = "rules", value_name = "FILE")]
         rules: Vec<PathBuf>,
 
-        /// Predefined ruleset(s): nv, fa, ifa (default: nv if no --rules given)
+        /// Predefined ruleset(s): nv, asfalt, fa (default: all presets if no --rules/--preset given)
         #[arg(short, long = "preset", value_name = "NAME")]
         preset: Vec<String>,
 

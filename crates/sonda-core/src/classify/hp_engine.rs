@@ -100,6 +100,7 @@ pub fn classify_hp(report: &AnalysisReport) -> RuleSetResult {
         ruleset_name: "Farligt avfall (HP-bedömning)".to_string(),
         overall_category,
         overall_reason,
+        lowest_category: None,
         determining_substances,
         substance_results,
         unmatched_substances: unresolved,

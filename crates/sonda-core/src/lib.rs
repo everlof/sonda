@@ -33,7 +33,8 @@ pub fn classify_pdf(
     let pages = extractor.extract_pages(pdf_bytes)?;
 
     // Parse into one or more reports (one per sample)
-    let reports = parsing::parse_reports(&pages)?;
+    let parsed = parsing::parse_reports(&pages)?;
+    let reports = parsed.reports;
 
     // Check for supported lab (check the first report)
     if reports
@@ -53,7 +54,26 @@ pub fn classify_pdf(
         samples.push(sample_result);
     }
 
-    Ok(ClassificationResult { samples })
+    let warnings = parsed
+        .warnings
+        .into_iter()
+        .map(|w| {
+            let message = if let Some(ref id) = w.sample_id {
+                format!(
+                    "Skipped sample '{}' (section {}): {}",
+                    id, w.section_index, w.reason
+                )
+            } else {
+                format!("Skipped section {}: {}", w.section_index, w.reason)
+            };
+            classify::outcome::ParseWarning {
+                sample_id: w.sample_id,
+                message,
+            }
+        })
+        .collect();
+
+    Ok(ClassificationResult { samples, warnings })
 }
 
 /// Classify a single sample report against applicable rulesets.

@@ -1,6 +1,14 @@
 use sonda_core::classify::outcome::ClassificationResult;
 
 pub fn print(result: &ClassificationResult, show_all: bool, verbose: bool) {
+    if !result.warnings.is_empty() {
+        println!("Warnings:\n");
+        for w in &result.warnings {
+            println!("  - {}", w.message);
+        }
+        println!();
+    }
+
     let multi_sample = result.samples.len() > 1;
 
     for (i, sample) in result.samples.iter().enumerate() {
@@ -29,22 +37,7 @@ pub fn print(result: &ClassificationResult, show_all: bool, verbose: bool) {
 
             // Per-substance results
             if verbose || show_all {
-                let results_to_show: Vec<_> = if show_all {
-                    rs_result.substance_results.iter().collect()
-                } else {
-                    rs_result
-                        .substance_results
-                        .iter()
-                        .filter(|r| {
-                            r.category
-                                != rs_result
-                                    .substance_results
-                                    .first()
-                                    .map(|f| f.category.as_str())
-                                    .unwrap_or("")
-                        })
-                        .collect()
-                };
+                let results_to_show: Vec<_> = rs_result.substance_results.iter().collect();
 
                 if !results_to_show.is_empty() {
                     let max_name = results_to_show
@@ -74,26 +67,30 @@ pub fn print(result: &ClassificationResult, show_all: bool, verbose: bool) {
 
             // Exceedances summary (non-verbose mode)
             if !verbose && !show_all {
-                let exceedances: Vec<_> = rs_result
-                    .substance_results
-                    .iter()
-                    .filter(|r| r.category == rs_result.overall_category && r.category != "KM")
-                    .collect();
+                if let Some(cleanest) = rs_result.lowest_category.as_deref() {
+                    if rs_result.overall_category != cleanest {
+                        let determining: Vec<_> = rs_result
+                            .substance_results
+                            .iter()
+                            .filter(|r| rs_result.determining_substances.contains(&r.raw_name))
+                            .collect();
 
-                if !exceedances.is_empty() {
-                    println!("  Determining substances:");
-                    for sr in &exceedances {
-                        let uncertain_marker = if sr.uncertain { " (?)" } else { "" };
-                        let threshold_info = match sr.exceeded_threshold {
-                            Some(t) => format!("{} > {} {}", sr.value, t, sr.unit),
-                            None => format!("{} {}", sr.value, sr.unit),
-                        };
-                        println!(
-                            "    {} -> {}{}  ({})",
-                            sr.raw_name, sr.category, uncertain_marker, threshold_info
-                        );
+                        if !determining.is_empty() {
+                            println!("  Determining substances:");
+                            for sr in &determining {
+                                let uncertain_marker = if sr.uncertain { " (?)" } else { "" };
+                                let threshold_info = match sr.exceeded_threshold {
+                                    Some(t) => format!("{} > {} {}", sr.value, t, sr.unit),
+                                    None => format!("{} {}", sr.value, sr.unit),
+                                };
+                                println!(
+                                    "    {} -> {}{}  ({})",
+                                    sr.raw_name, sr.category, uncertain_marker, threshold_info
+                                );
+                            }
+                            println!();
+                        }
                     }
-                    println!();
                 }
             }
 
