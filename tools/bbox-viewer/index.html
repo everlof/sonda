@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sonda BBox Viewer</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>Sonda BBox Viewer</h1>
+    <div class="inputs">
+      <label>PDF <input id="pdfInput" type="file" accept="application/pdf" /></label>
+      <label>JSON <input id="jsonInput" type="file" accept="application/json" /></label>
+      <label class="check">
+        <input id="topLeftToggle" type="checkbox" checked />
+        Poppler top-left Y
+      </label>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-tools">
+        <input id="searchInput" type="search" placeholder="Filter entries..." />
+        <div id="stats"></div>
+      </div>
+      <ul id="entriesList"></ul>
+    </aside>
+
+    <section class="viewer">
+      <div class="viewer-toolbar">
+        <button id="prevPageBtn" type="button">Prev</button>
+        <span id="pageLabel">Page 0 / 0</span>
+        <button id="nextPageBtn" type="button">Next</button>
+        <span id="entryLabel"></span>
+      </div>
+      <div id="canvasWrap" class="canvas-wrap">
+        <canvas id="pdfCanvas"></canvas>
+        <div id="overlay" class="overlay"></div>
+        <div id="hoverInfo" class="hover-info" hidden></div>
+      </div>
+      <pre id="entryDetails"></pre>
+    </section>
+  </main>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

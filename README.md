@@ -86,3 +86,24 @@ Key design decisions:
 - PDF extraction via pluggable `PdfExtractor` trait (Phase 1: pdftotext subprocess)
 - Rules are pure JSON data, embedded at compile time for presets
 - Every classification decision carries a human-readable reason string
+
+## BBox Viewer (Trace Highlight Debug UI)
+
+A minimal browser UI is included to test `trace.entries[].evidence_spans` overlays.
+
+```
+# 1) Generate JSON with trace data
+sonda classify report.pdf --output json > result.json
+
+# 2) Start a static file server from repo root
+python3 -m http.server 8000
+
+# 3) Open the viewer
+http://localhost:8000/tools/bbox-viewer/
+```
+
+Then load:
+- the original PDF file
+- the generated `result.json`
+
+Click an entry in the left panel to highlight its matched spans on the PDF page.
