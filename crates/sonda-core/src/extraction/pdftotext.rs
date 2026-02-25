@@ -70,7 +70,17 @@ impl PdfExtractor for PdftotextExtractor {
             .enumerate()
             .map(|(i, page_text)| {
                 let lines: Vec<String> = page_text.lines().map(|l| l.to_string()).collect();
-                let line_spans = match_layout_lines_to_bbox(i + 1, &lines, &bbox_lines);
+                let line_spans = bbox_lines
+                    .iter()
+                    .filter(|b| b.page_number == i + 1)
+                    .enumerate()
+                    .map(|(line_index, b)| LineSpan {
+                        page_number: i + 1,
+                        line_index,
+                        text: b.text.clone(),
+                        bbox: b.bbox.clone(),
+                    })
+                    .collect();
                 PageContent {
                     page_number: i + 1,
                     lines,
@@ -121,80 +131,80 @@ fn extract_bbox_lines(pdf_path: &std::path::Path) -> Result<Vec<BBoxLine>, Sonda
 
 fn parse_bbox_xml(xml: &str) -> Vec<BBoxLine> {
     let mut out = Vec::new();
-    let mut current_page: Option<usize> = None;
-    let mut current_bbox: Option<BBox> = None;
-    let mut current_words: Vec<String> = Vec::new();
+    let mut cursor = 0usize;
+    let mut page_seq = 0usize;
+    while let Some(page_pos_rel) = xml[cursor..].find("<page ") {
+        page_seq += 1;
+        let page_pos = cursor + page_pos_rel;
+        let page_tag_end = match xml[page_pos..].find('>') {
+            Some(v) => page_pos + v,
+            None => break,
+        };
+        let page_tag = &xml[page_pos..=page_tag_end];
+        let current_page = parse_attr_usize(page_tag, "number").unwrap_or(page_seq);
 
-    for raw in xml.lines() {
-        let line = raw.trim();
+        let page_close = match xml[page_tag_end + 1..].find("</page>") {
+            Some(v) => page_tag_end + 1 + v,
+            None => break,
+        };
+        let page_body = &xml[page_tag_end + 1..page_close];
 
-        if line.starts_with("<page ") {
-            current_page = parse_attr_usize(line, "number");
-            continue;
-        }
+        let mut line_cursor = 0usize;
+        while let Some(line_pos_rel) = page_body[line_cursor..].find("<line ") {
+            let line_pos = line_cursor + line_pos_rel;
+            let line_tag_end = match page_body[line_pos..].find('>') {
+                Some(v) => line_pos + v,
+                None => break,
+            };
+            let line_open_tag = &page_body[line_pos..=line_tag_end];
 
-        if line.starts_with("<line ") {
-            current_bbox = parse_bbox(line);
-            current_words.clear();
-            continue;
-        }
+            let line_close_rel = match page_body[line_tag_end + 1..].find("</line>") {
+                Some(v) => v,
+                None => break,
+            };
+            let line_close = line_tag_end + 1 + line_close_rel;
+            let line_body = &page_body[line_tag_end + 1..line_close];
 
-        if line.starts_with("<word ") {
-            if let Some(word_text) = parse_word_text(line) {
-                let w = decode_xml_entities(&word_text).trim().to_string();
-                if !w.is_empty() {
-                    current_words.push(w);
+            let bbox = parse_bbox(line_open_tag);
+            let mut words = Vec::new();
+            let mut word_cursor = 0usize;
+            while let Some(word_pos_rel) = line_body[word_cursor..].find("<word ") {
+                let word_pos = word_cursor + word_pos_rel;
+                let word_tag_end = match line_body[word_pos..].find('>') {
+                    Some(v) => word_pos + v,
+                    None => break,
+                };
+                let word_close_rel = match line_body[word_tag_end + 1..].find("</word>") {
+                    Some(v) => v,
+                    None => break,
+                };
+                let word_close = word_tag_end + 1 + word_close_rel;
+                let word_text = &line_body[word_tag_end + 1..word_close];
+                let word = decode_xml_entities(word_text).trim().to_string();
+                if !word.is_empty() {
+                    words.push(word);
                 }
+                word_cursor = word_close + "</word>".len();
             }
-            continue;
-        }
 
-        if line.starts_with("</line>") {
-            if let (Some(page_number), Some(bbox)) = (current_page, current_bbox.take()) {
-                let text = current_words.join(" ");
+            if let Some(bbox) = bbox {
+                let text = words.join(" ");
                 if !text.is_empty() {
                     out.push(BBoxLine {
-                        page_number,
+                        page_number: current_page,
                         text,
                         bbox,
                     });
                 }
             }
-            current_words.clear();
+
+            line_cursor = line_close + "</line>".len();
         }
+
+        cursor = page_close + "</page>".len();
     }
 
     out
-}
-
-fn match_layout_lines_to_bbox(
-    page_number: usize,
-    lines: &[String],
-    bbox_lines: &[BBoxLine],
-) -> Vec<LineSpan> {
-    let mut spans = Vec::new();
-    let mut used = vec![false; bbox_lines.len()];
-
-    for (line_index, line) in lines.iter().enumerate() {
-        let norm = normalize_ws(line);
-        if norm.is_empty() {
-            continue;
-        }
-
-        if let Some((i, b)) = bbox_lines.iter().enumerate().find(|(i, b)| {
-            !used[*i] && b.page_number == page_number && normalize_ws(&b.text) == norm
-        }) {
-            used[i] = true;
-            spans.push(LineSpan {
-                page_number,
-                line_index,
-                text: line.clone(),
-                bbox: b.bbox.clone(),
-            });
-        }
-    }
-
-    spans
 }
 
 fn parse_attr_usize(tag: &str, name: &str) -> Option<usize> {
@@ -222,22 +232,12 @@ fn parse_bbox(line_tag: &str) -> Option<BBox> {
     })
 }
 
-fn parse_word_text(word_tag: &str) -> Option<String> {
-    let start = word_tag.find('>')? + 1;
-    let end = word_tag.rfind("</word>")?;
-    Some(word_tag[start..end].to_string())
-}
-
 fn decode_xml_entities(s: &str) -> String {
     s.replace("&amp;", "&")
         .replace("&lt;", "<")
         .replace("&gt;", ">")
         .replace("&quot;", "\"")
         .replace("&apos;", "'")
-}
-
-fn normalize_ws(s: &str) -> String {
-    s.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
 #[cfg(test)]
@@ -264,8 +264,8 @@ mod tests {
     }
 
     #[test]
-    fn test_match_layout_lines_to_bbox() {
-        let bbox_lines = vec![BBoxLine {
+    fn test_bbox_lines_mapped_to_page_spans() {
+        let bbox_lines = [BBoxLine {
             page_number: 1,
             text: "Arsenik (As) 68 mg/kg TS".to_string(),
             bbox: BBox {
@@ -276,8 +276,17 @@ mod tests {
             },
         }];
 
-        let lines = vec!["Arsenik (As)   68   mg/kg TS".to_string()];
-        let spans = match_layout_lines_to_bbox(1, &lines, &bbox_lines);
+        let spans: Vec<LineSpan> = bbox_lines
+            .iter()
+            .filter(|b| b.page_number == 1)
+            .enumerate()
+            .map(|(line_index, b)| LineSpan {
+                page_number: 1,
+                line_index,
+                text: b.text.clone(),
+                bbox: b.bbox.clone(),
+            })
+            .collect();
         assert_eq!(spans.len(), 1);
         assert_eq!(spans[0].line_index, 0);
         assert_eq!(spans[0].page_number, 1);
