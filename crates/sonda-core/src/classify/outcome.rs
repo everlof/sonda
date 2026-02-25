@@ -115,4 +115,5 @@ pub struct ClassificationResult {
     pub samples: Vec<SampleResult>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub warnings: Vec<ParseWarning>,
+    pub trace: crate::trace::TraceBundle,
 }

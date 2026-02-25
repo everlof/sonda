@@ -104,6 +104,7 @@ mod tests {
                 "".into(),
                 "Footer".into(),
             ],
+            line_spans: vec![],
         }];
 
         let regions = find_table_regions(&pages);

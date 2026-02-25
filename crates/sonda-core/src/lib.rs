@@ -5,6 +5,7 @@ pub mod extraction;
 pub mod model;
 pub mod parsing;
 pub mod rules;
+pub mod trace;
 
 use classify::outcome::{ClassificationResult, SampleResult};
 use error::SondaError;
@@ -35,6 +36,7 @@ pub fn classify_pdf(
     // Parse into one or more reports (one per sample)
     let parsed = parsing::parse_reports(&pages)?;
     let reports = parsed.reports;
+    let mut trace = trace::TraceBundle::default();
 
     // Check for supported lab (check the first report)
     if reports
@@ -51,6 +53,25 @@ pub fn classify_pdf(
     let mut samples = Vec::new();
     for report in &reports {
         let sample_result = classify_sample(report, rulesets, options)?;
+
+        for (entry_idx, row) in report.rows.iter().enumerate() {
+            trace.entries.push(trace::build_entry_trace(
+                &sample_result.sample_id,
+                entry_idx,
+                row,
+                &row.unit.to_string(),
+                &pages,
+            ));
+        }
+
+        for (rs_idx, rs) in sample_result.ruleset_results.iter().enumerate() {
+            trace.decisions.extend(trace::build_ruleset_decisions(
+                &sample_result.sample_id,
+                rs_idx,
+                rs,
+            ));
+        }
+
         samples.push(sample_result);
     }
 
@@ -66,6 +87,12 @@ pub fn classify_pdf(
             } else {
                 format!("Skipped section {}: {}", w.section_index, w.reason)
             };
+            trace.warnings.push(trace::TraceWarning {
+                sample_id: w.sample_id.clone(),
+                message: message.clone(),
+                severity: trace::TraceSeverity::Important,
+                visibility: trace::TraceVisibility::Always,
+            });
             classify::outcome::ParseWarning {
                 sample_id: w.sample_id,
                 message,
@@ -73,7 +100,11 @@ pub fn classify_pdf(
         })
         .collect();
 
-    Ok(ClassificationResult { samples, warnings })
+    Ok(ClassificationResult {
+        samples,
+        warnings,
+        trace,
+    })
 }
 
 /// Classify a single sample report against applicable rulesets.
