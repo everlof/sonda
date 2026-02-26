@@ -21,6 +21,14 @@ pub struct ClassifyOptions {
     pub include_hp: bool,
 }
 
+/// Parse a Sweco "AVFALLSKLASSNING@SWECO" xlsx file into structured reports.
+///
+/// Returns the same `ParsedReports` as `parse_pdf()`, so results slot directly
+/// into `classify_reports()`.
+pub fn parse_sweco_xlsx(xlsx_bytes: &[u8]) -> Result<ParsedReports, SondaError> {
+    extraction::sweco_xlsx::parse_sweco_xlsx(xlsx_bytes)
+}
+
 /// Parse a PDF report into structured analysis reports without classifying.
 ///
 /// Returns the intermediate `ParsedReports` which can be serialized to JSON,

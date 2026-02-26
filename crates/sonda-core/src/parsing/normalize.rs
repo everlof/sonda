@@ -157,12 +157,15 @@ static ALIASES: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new(||
     m.insert("aromater_>c8_c10", "aromater_c8_c10");
     m.insert("aromater_c8_c10", "aromater_c8_c10");
     m.insert("aromater__c8_c10", "aromater_c8_c10");
+    m.insert("summa_aromater_c8_c10", "aromater_c8_c10");
     m.insert("aromater_>c10_c16", "aromater_c10_c16");
     m.insert("aromater_c10_c16", "aromater_c10_c16");
     m.insert("aromater__c10_c16", "aromater_c10_c16");
+    m.insert("summa_aromater_c10_c16", "aromater_c10_c16");
     m.insert("aromater_>c16_c35", "aromater_c16_c35");
     m.insert("aromater_c16_c35", "aromater_c16_c35");
     m.insert("aromater__c16_c35", "aromater_c16_c35");
+    m.insert("summa_aromater_c16_c35", "aromater_c16_c35");
 
     // PAH groups
     m.insert("pah_l", "pah_l");
@@ -207,6 +210,7 @@ static ALIASES: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new(||
     m.insert("benso_b_k_fluoranten", "benso_b_k_fluoranten");
     m.insert("benso_a_pyren", "benso_a_pyren");
     m.insert("dibenso_a_h_antracen", "dibenso_a_h_antracen");
+    m.insert("dibenso_ah_antracen", "dibenso_a_h_antracen");
     m.insert("benso_ghi_perylen", "benso_ghi_perylen");
     m.insert("benso_g_h_i_perylen", "benso_ghi_perylen");
     m.insert("indeno_1_2_3_cd_pyren", "indeno_1_2_3_cd_pyren");
@@ -274,6 +278,27 @@ mod tests {
             normalize_substance("Indeno(1,2,3-cd)pyren"),
             "indeno_1_2_3_cd_pyren"
         );
+    }
+
+    #[test]
+    fn test_dibenso_antracen_variants() {
+        assert_eq!(
+            normalize_substance("Dibenso(a,h)antracen"),
+            "dibenso_a_h_antracen"
+        );
+        assert_eq!(
+            normalize_substance("dibenso(ah)antracen"),
+            "dibenso_a_h_antracen"
+        );
+    }
+
+    #[test]
+    fn test_summa_aromater_aliases() {
+        assert_eq!(
+            normalize_substance("Summa Aromater >C16-C35"),
+            "aromater_c16_c35"
+        );
+        assert_eq!(normalize_substance("Aromater >C16-C35"), "aromater_c16_c35");
     }
 
     #[test]

@@ -70,10 +70,18 @@ pub fn run(
         .extension()
         .map(|ext| ext.eq_ignore_ascii_case("json"))
         .unwrap_or(false);
+    let ext_is_xlsx = input_file
+        .extension()
+        .map(|ext| ext.eq_ignore_ascii_case("xlsx"))
+        .unwrap_or(false);
     let input_bytes = std::fs::read(&input_file)?;
-    let should_parse_json = ext_is_json || looks_like_json(&input_bytes);
+    let should_parse_json = ext_is_json || (!ext_is_xlsx && looks_like_json(&input_bytes));
 
-    let result = if should_parse_json {
+    let result = if ext_is_xlsx {
+        // Parse Sweco XLSX and classify.
+        let parsed = sonda_core::parse_sweco_xlsx(&input_bytes)?;
+        sonda_core::classify_reports(&parsed.reports, &rulesets, &options)?
+    } else if should_parse_json {
         // Load pre-parsed reports from JSON.
         // Expected shape: top-level array of AnalysisReport.
         let reports = parse_reports_json(&input_bytes)?;

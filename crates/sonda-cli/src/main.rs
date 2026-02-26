@@ -17,10 +17,10 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Parse a PDF lab report into structured data (without classifying)
+    /// Parse a lab report (PDF or Sweco XLSX) into structured data (without classifying)
     Parse {
-        /// Path to the PDF file
-        pdf_file: PathBuf,
+        /// Path to PDF or Sweco XLSX file
+        input_file: PathBuf,
 
         /// Output format: table (default) or json
         #[arg(short, long, default_value = "table")]
@@ -85,10 +85,10 @@ fn main() {
 
     let result = match cli.command {
         Commands::Parse {
-            pdf_file,
+            input_file,
             output,
             out,
-        } => commands::parse::run(pdf_file, &output, out),
+        } => commands::parse::run(input_file, &output, out),
         Commands::Classify {
             input_file,
             rules,

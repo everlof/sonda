@@ -1,4 +1,5 @@
 pub mod pdftotext;
+pub mod sweco_xlsx;
 pub mod table;
 
 use crate::error::SondaError;

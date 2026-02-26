@@ -4,13 +4,23 @@ use std::path::PathBuf;
 use crate::output;
 
 pub fn run(
-    pdf_file: PathBuf,
+    input_file: PathBuf,
     output_format: &str,
     output_file: Option<PathBuf>,
 ) -> Result<(), sonda_core::error::SondaError> {
-    let pdf_bytes = std::fs::read(&pdf_file)?;
-    let extractor = PdftotextExtractor::new();
-    let parsed = sonda_core::parse_pdf(&pdf_bytes, &extractor)?;
+    let input_bytes = std::fs::read(&input_file)?;
+
+    let is_xlsx = input_file
+        .extension()
+        .map(|ext| ext.eq_ignore_ascii_case("xlsx"))
+        .unwrap_or(false);
+
+    let parsed = if is_xlsx {
+        sonda_core::parse_sweco_xlsx(&input_bytes)?
+    } else {
+        let extractor = PdftotextExtractor::new();
+        sonda_core::parse_pdf(&input_bytes, &extractor)?
+    };
 
     let output_str = match output_format {
         // Use the same JSON shape that `sonda classify` consumes.
