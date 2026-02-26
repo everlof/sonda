@@ -4,7 +4,7 @@
 
 ```bash
 cargo build                    # build workspace
-cargo test --workspace         # run all tests (77 unit tests)
+cargo test --workspace         # run all tests (80 unit + 7 integration)
 cargo test -p sonda-core       # core library tests only
 cargo build --release          # optimized build
 ```
@@ -19,6 +19,7 @@ Cargo workspace with two crates:
 - `crates/sonda-cli/` — CLI binary using clap
 - `rules/` — predefined ruleset JSON files (embedded via `include_str!`)
 - `docs/research/` — regulatory research documentation
+- `.github/workflows/ci.yml` — CI (fmt, clippy, check, test)
 
 ### Key Source Files
 
@@ -32,7 +33,7 @@ Cargo workspace with two crates:
 - `sonda-core/src/clp/speciation.rs` — substance resolution (lab name → CLP compound)
 - `sonda-core/src/parsing/normalize.rs` — substance name normalization + alias map
 - `sonda-core/src/parsing/values.rs` — value parsing ("68", "< 0.030")
-- `sonda-core/src/extraction/pdftotext.rs` — pdftotext subprocess backend
+- `sonda-core/src/extraction/pdftotext.rs` — pdftotext subprocess backend + quick-xml bbox parser
 - `sonda-core/src/rules/schema.rs` — serde types for rule JSON format
 - `sonda-core/src/rules/builtin.rs` — embedded predefined rulesets (nv, asfalt, fa)
 
@@ -42,7 +43,9 @@ Cargo workspace with two crates:
 - Substance names are normalized to lowercase snake_case canonical keys (see alias map in `normalize.rs`)
 - Rule JSON threshold values are strings, not numbers, to preserve decimal precision
 - Classification reasons are generated as human-readable strings on every `SubstanceResult`
-- PDF extraction is behind a trait (`PdfExtractor`) for pluggability
+- PDF extraction is behind a trait (`PdfExtractor`) for pluggability; integration tests use a `MockExtractor`
+- Bbox XML from `pdftotext -bbox-layout` is parsed with `quick-xml` (event-based reader)
+- Lines with valid substance names but unparseable values produce `SkippedLine` diagnostics (surfaced as trace warnings)
 - Tests for parsing and classification use `rust_decimal_macros::dec!()` macro
 - CLP substance data embedded from `rules/clp-substances.json` via `include_str!`
 - Speciation: metals use worst-case compound assumption with molecular weight conversion factors
