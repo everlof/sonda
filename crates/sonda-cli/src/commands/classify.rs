@@ -7,6 +7,22 @@ use std::path::PathBuf;
 
 use crate::output;
 
+fn parse_reports_json(
+    json_bytes: &[u8],
+) -> Result<Vec<AnalysisReport>, sonda_core::error::SondaError> {
+    let reports = serde_json::from_slice::<Vec<AnalysisReport>>(json_bytes)?;
+    Ok(reports)
+}
+
+fn looks_like_json(bytes: &[u8]) -> bool {
+    bytes
+        .iter()
+        .copied()
+        .find(|b| !b.is_ascii_whitespace())
+        .map(|b| b == b'[' || b == b'{')
+        .unwrap_or(false)
+}
+
 pub fn run(
     input_file: PathBuf,
     rule_files: Vec<PathBuf>,
@@ -49,22 +65,23 @@ pub fn run(
         ));
     }
 
-    // Determine input type by extension
-    let is_json = input_file
+    // Determine input type by extension; also allow extension-less JSON files.
+    let ext_is_json = input_file
         .extension()
         .map(|ext| ext.eq_ignore_ascii_case("json"))
         .unwrap_or(false);
+    let input_bytes = std::fs::read(&input_file)?;
+    let should_parse_json = ext_is_json || looks_like_json(&input_bytes);
 
-    let result = if is_json {
-        // Load pre-parsed reports from JSON
-        let json_bytes = std::fs::read(&input_file)?;
-        let reports: Vec<AnalysisReport> = serde_json::from_slice(&json_bytes)?;
+    let result = if should_parse_json {
+        // Load pre-parsed reports from JSON.
+        // Expected shape: top-level array of AnalysisReport.
+        let reports = parse_reports_json(&input_bytes)?;
         sonda_core::classify_reports(&reports, &rulesets, &options)?
     } else {
-        // Parse and classify PDF
-        let pdf_bytes = std::fs::read(&input_file)?;
+        // Parse and classify PDF.
         let extractor = PdftotextExtractor::new();
-        sonda_core::classify_pdf(&pdf_bytes, &extractor, &rulesets, &options)?
+        sonda_core::classify_pdf(&input_bytes, &extractor, &rulesets, &options)?
     };
 
     // Output
@@ -74,4 +91,35 @@ pub fn run(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_reports_json;
+
+    #[test]
+    fn parse_reports_json_accepts_array_shape() {
+        let json = br#"
+[
+  {
+    "header": {
+      "lab": "Eurofins",
+      "sample_id": "P001",
+      "matrix": "jord"
+    },
+    "rows": [
+      {
+        "raw_name": "Arsenik (As)",
+        "normalized_name": "arsenik",
+        "value": { "Measured": "15" },
+        "unit": "mg/kg TS"
+      }
+    ]
+  }
+]
+"#;
+        let reports = parse_reports_json(json).expect("array JSON should parse");
+        assert_eq!(reports.len(), 1);
+        assert_eq!(reports[0].header.sample_id.as_deref(), Some("P001"));
+    }
 }

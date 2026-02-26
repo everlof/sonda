@@ -13,14 +13,16 @@ pub fn run(
     let parsed = sonda_core::parse_pdf(&pdf_bytes, &extractor)?;
 
     let output_str = match output_format {
-        "json" => serde_json::to_string_pretty(&parsed)?,
+        // Use the same JSON shape that `sonda classify` consumes.
+        "json" => serde_json::to_string_pretty(&parsed.reports)?,
         _ => output::table::format_parsed(&parsed),
     };
 
     match output_file {
         Some(path) => {
-            // Always write JSON when saving to file
-            let json = serde_json::to_string_pretty(&parsed)?;
+            // Always write JSON when saving to file.
+            // The file format is a top-level array of AnalysisReport.
+            let json = serde_json::to_string_pretty(&parsed.reports)?;
             std::fs::write(&path, json)?;
             eprintln!(
                 "Parsed {} sample(s), written to {}",
