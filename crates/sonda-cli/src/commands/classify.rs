@@ -1,4 +1,5 @@
 use sonda_core::extraction::pdftotext::PdftotextExtractor;
+use sonda_core::model::AnalysisReport;
 use sonda_core::rules::builtin;
 use sonda_core::rules::schema::RuleSetDef;
 use sonda_core::ClassifyOptions;
@@ -7,7 +8,7 @@ use std::path::PathBuf;
 use crate::output;
 
 pub fn run(
-    pdf_file: PathBuf,
+    input_file: PathBuf,
     rule_files: Vec<PathBuf>,
     presets: Vec<String>,
     output_format: &str,
@@ -48,12 +49,23 @@ pub fn run(
         ));
     }
 
-    // Read PDF
-    let pdf_bytes = std::fs::read(&pdf_file)?;
+    // Determine input type by extension
+    let is_json = input_file
+        .extension()
+        .map(|ext| ext.eq_ignore_ascii_case("json"))
+        .unwrap_or(false);
 
-    // Extract and classify
-    let extractor = PdftotextExtractor::new();
-    let result = sonda_core::classify_pdf(&pdf_bytes, &extractor, &rulesets, &options)?;
+    let result = if is_json {
+        // Load pre-parsed reports from JSON
+        let json_bytes = std::fs::read(&input_file)?;
+        let reports: Vec<AnalysisReport> = serde_json::from_slice(&json_bytes)?;
+        sonda_core::classify_reports(&reports, &rulesets, &options)?
+    } else {
+        // Parse and classify PDF
+        let pdf_bytes = std::fs::read(&input_file)?;
+        let extractor = PdftotextExtractor::new();
+        sonda_core::classify_pdf(&pdf_bytes, &extractor, &rulesets, &options)?
+    };
 
     // Output
     match output_format {

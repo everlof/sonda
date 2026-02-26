@@ -11,6 +11,7 @@ use classify::outcome::{ClassificationResult, SampleResult};
 use error::SondaError;
 use extraction::PdfExtractor;
 use model::{AnalysisReport, Matrix};
+use parsing::ParsedReports;
 use rules::schema::RuleSetDef;
 
 /// Options controlling which classification engines to run.
@@ -18,6 +19,48 @@ use rules::schema::RuleSetDef;
 pub struct ClassifyOptions {
     /// Run HP-based hazardous waste (FA) classification.
     pub include_hp: bool,
+}
+
+/// Parse a PDF report into structured analysis reports without classifying.
+///
+/// Returns the intermediate `ParsedReports` which can be serialized to JSON,
+/// inspected, edited, and later fed to `classify_reports()`.
+pub fn parse_pdf(
+    pdf_bytes: &[u8],
+    extractor: &dyn PdfExtractor,
+) -> Result<ParsedReports, SondaError> {
+    let pages = extractor.extract_pages(pdf_bytes)?;
+    parsing::parse_reports(&pages)
+}
+
+/// Classify pre-parsed analysis reports against one or more rulesets.
+///
+/// Use this when you have `AnalysisReport`s from a previous `parse_pdf()` call
+/// (possibly edited/corrected by the user).
+pub fn classify_reports(
+    reports: &[AnalysisReport],
+    rulesets: &[RuleSetDef],
+    options: &ClassifyOptions,
+) -> Result<ClassificationResult, SondaError> {
+    if reports.is_empty() {
+        return Err(SondaError::ParseError(
+            "no analysis reports to classify".into(),
+        ));
+    }
+
+    let mut samples = Vec::new();
+    let trace = trace::TraceBundle::default();
+
+    for report in reports {
+        let sample_result = classify_sample(report, rulesets, options)?;
+        samples.push(sample_result);
+    }
+
+    Ok(ClassificationResult {
+        samples,
+        warnings: vec![],
+        trace,
+    })
 }
 
 /// Main API entry point: classify a PDF report against one or more rulesets.

@@ -17,10 +17,23 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Classify a PDF lab report
-    Classify {
+    /// Parse a PDF lab report into structured data (without classifying)
+    Parse {
         /// Path to the PDF file
         pdf_file: PathBuf,
+
+        /// Output format: table (default) or json
+        #[arg(short, long, default_value = "table")]
+        output: String,
+
+        /// Write parsed output to a JSON file
+        #[arg(short = 'O', long = "out", value_name = "FILE")]
+        out: Option<PathBuf>,
+    },
+    /// Classify a lab report (PDF or pre-parsed JSON)
+    Classify {
+        /// Path to PDF or pre-parsed JSON file
+        input_file: PathBuf,
 
         /// Custom JSON rule file(s)
         #[arg(short, long = "rules", value_name = "FILE")]
@@ -71,14 +84,19 @@ fn main() {
     let cli = Cli::parse();
 
     let result = match cli.command {
-        Commands::Classify {
+        Commands::Parse {
             pdf_file,
+            output,
+            out,
+        } => commands::parse::run(pdf_file, &output, out),
+        Commands::Classify {
+            input_file,
             rules,
             preset,
             output,
             show_all,
             verbose,
-        } => commands::classify::run(pdf_file, rules, preset, &output, show_all, verbose),
+        } => commands::classify::run(input_file, rules, preset, &output, show_all, verbose),
         Commands::Rules { action } => match action {
             RulesAction::List => commands::rules::list(),
             RulesAction::Explain { preset } => commands::rules::explain(&preset),

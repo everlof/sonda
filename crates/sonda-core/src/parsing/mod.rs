@@ -9,7 +9,7 @@ use header::parse_header;
 use normalize::normalize_substance;
 use values::parse_value;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ParseWarning {
     pub section_index: usize,
     pub sample_id: Option<String>,
@@ -17,13 +17,13 @@ pub struct ParseWarning {
 }
 
 /// A line that looked like substance data but could not be fully parsed.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct SkippedLine {
     pub line_text: String,
     pub reason: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ParsedReports {
     pub reports: Vec<AnalysisReport>,
     pub warnings: Vec<ParseWarning>,

@@ -1,4 +1,123 @@
 use sonda_core::classify::outcome::ClassificationResult;
+use sonda_core::parsing::ParsedReports;
+
+/// Format parsed reports as a human-readable table.
+pub fn format_parsed(parsed: &ParsedReports) -> String {
+    let mut out = String::new();
+
+    let multi_sample = parsed.reports.len() > 1;
+
+    for (i, report) in parsed.reports.iter().enumerate() {
+        if multi_sample {
+            if i > 0 {
+                out.push('\n');
+            }
+            let sample_id = report
+                .header
+                .sample_id
+                .as_deref()
+                .or(report.header.lab_report_id.as_deref())
+                .unwrap_or("unknown");
+            out.push_str(&format!("--- Sample: {} ---\n\n", sample_id));
+        }
+
+        // Header info
+        if let Some(ref lab) = report.header.lab {
+            out.push_str(&format!("  Lab:       {}\n", lab));
+        }
+        if let Some(ref id) = report.header.lab_report_id {
+            out.push_str(&format!("  Report ID: {}\n", id));
+        }
+        if let Some(ref id) = report.header.sample_id {
+            out.push_str(&format!("  Sample ID: {}\n", id));
+        }
+        if let Some(ref matrix) = report.header.matrix {
+            out.push_str(&format!("  Matrix:    {}\n", matrix));
+        }
+        if let Some(ref date) = report.header.date {
+            out.push_str(&format!("  Date:      {}\n", date));
+        }
+        out.push('\n');
+
+        if report.rows.is_empty() {
+            out.push_str("  (no substances parsed)\n");
+            continue;
+        }
+
+        // Column widths
+        let max_raw = report
+            .rows
+            .iter()
+            .map(|r| r.raw_name.len())
+            .max()
+            .unwrap_or(10)
+            .max(8);
+        let max_norm = report
+            .rows
+            .iter()
+            .map(|r| r.normalized_name.len())
+            .max()
+            .unwrap_or(10)
+            .max(10);
+        let max_val = report
+            .rows
+            .iter()
+            .map(|r| format!("{}", r.value).len())
+            .max()
+            .unwrap_or(8)
+            .max(5);
+
+        // Header
+        out.push_str(&format!(
+            "  {:<raw_w$}  {:<norm_w$}  {:>val_w$}  Unit\n",
+            "Raw name",
+            "Normalized",
+            "Value",
+            raw_w = max_raw,
+            norm_w = max_norm,
+            val_w = max_val,
+        ));
+        out.push_str(&format!(
+            "  {}\n",
+            "-".repeat(max_raw + max_norm + max_val + 14)
+        ));
+
+        for row in &report.rows {
+            let val_str = format!("{}", row.value);
+            out.push_str(&format!(
+                "  {:<raw_w$}  {:<norm_w$}  {:>val_w$}  {}\n",
+                row.raw_name,
+                row.normalized_name,
+                val_str,
+                row.unit,
+                raw_w = max_raw,
+                norm_w = max_norm,
+                val_w = max_val,
+            ));
+        }
+    }
+
+    // Warnings
+    if !parsed.warnings.is_empty() {
+        out.push_str("\nWarnings:\n");
+        for w in &parsed.warnings {
+            out.push_str(&format!("  - section {}: {}\n", w.section_index, w.reason));
+        }
+    }
+
+    // Skipped lines
+    if !parsed.skipped_lines.is_empty() {
+        out.push_str(&format!(
+            "\nSkipped lines ({}):\n",
+            parsed.skipped_lines.len()
+        ));
+        for sl in &parsed.skipped_lines {
+            out.push_str(&format!("  - [{}] {}\n", sl.reason, sl.line_text));
+        }
+    }
+
+    out
+}
 
 pub fn print(result: &ClassificationResult, show_all: bool, verbose: bool) {
     if !result.warnings.is_empty() {

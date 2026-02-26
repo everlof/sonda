@@ -1,11 +1,14 @@
-//! Integration tests for classify_pdf() end-to-end pipeline.
+//! Integration tests for classify_pdf(), parse_pdf(), and classify_reports()
+//! end-to-end pipeline.
 //!
 //! Uses a MockExtractor that returns pre-built PageContent without
 //! invoking pdftotext, so these tests run without poppler-utils.
 
 use sonda_core::classify_pdf;
+use sonda_core::classify_reports;
 use sonda_core::error::SondaError;
 use sonda_core::extraction::{PageContent, PdfExtractor};
+use sonda_core::parse_pdf;
 use sonda_core::rules::builtin::load_preset;
 use sonda_core::ClassifyOptions;
 
@@ -275,4 +278,70 @@ fn non_eurofins_report_returns_unsupported_error() {
     let result = classify_pdf(&[], &extractor, &[nv], &ClassifyOptions::default());
 
     assert!(matches!(result, Err(SondaError::UnsupportedReport(_))));
+}
+
+// ---------------------------------------------------------------------------
+// Test 8: parse_pdf() returns structured reports
+// ---------------------------------------------------------------------------
+#[test]
+fn parse_pdf_returns_structured_reports() {
+    let extractor = MockExtractor {
+        pages: vec![page(
+            1,
+            &[
+                "Eurofins Environment Testing Sweden AB",
+                "Analysrapport",
+                "Rapport: AR-2024-001",
+                "Provnummer: P001",
+                "Matris: Jord",
+                "",
+                "  Arsenik (As)          8           mg/kg TS",
+                "  Bly (Pb)              45          mg/kg TS",
+            ],
+        )],
+    };
+
+    let parsed = parse_pdf(&[], &extractor).unwrap();
+
+    assert_eq!(parsed.reports.len(), 1);
+    assert_eq!(parsed.reports[0].rows.len(), 2);
+    assert_eq!(parsed.reports[0].rows[0].normalized_name, "arsenik");
+    assert_eq!(parsed.reports[0].rows[1].normalized_name, "bly");
+}
+
+// ---------------------------------------------------------------------------
+// Test 9: Two-step flow — parse then classify via JSON roundtrip
+// ---------------------------------------------------------------------------
+#[test]
+fn two_step_parse_then_classify() {
+    let nv = load_preset("nv").unwrap();
+    let extractor = MockExtractor {
+        pages: vec![page(
+            1,
+            &[
+                "Eurofins Environment Testing Sweden AB",
+                "Analysrapport",
+                "Provnummer: P001",
+                "Matris: Jord",
+                "",
+                "  Arsenik (As)          15          mg/kg TS",
+                "  Bly (Pb)              60          mg/kg TS",
+            ],
+        )],
+    };
+
+    // Step 1: Parse
+    let parsed = parse_pdf(&[], &extractor).unwrap();
+
+    // Simulate JSON roundtrip (serialize then deserialize)
+    let json = serde_json::to_string(&parsed.reports).unwrap();
+    let reports: Vec<sonda_core::model::AnalysisReport> = serde_json::from_str(&json).unwrap();
+
+    // Step 2: Classify from parsed reports
+    let result = classify_reports(&reports, &[nv], &ClassifyOptions::default()).unwrap();
+
+    assert_eq!(result.samples.len(), 1);
+    let rs = &result.samples[0].ruleset_results[0];
+    // As 15 > KM(10), Pb 60 > KM(50) → MKM
+    assert_eq!(rs.overall_category, "MKM");
 }
