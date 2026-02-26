@@ -75,6 +75,16 @@ pub fn classify_pdf(
         samples.push(sample_result);
     }
 
+    // Surface skipped lines as trace warnings (Info/Auto — diagnostic, not critical)
+    for skip in parsed.skipped_lines {
+        trace.warnings.push(trace::TraceWarning {
+            sample_id: None,
+            message: format!("Skipped line ({}): '{}'", skip.reason, skip.line_text),
+            severity: trace::TraceSeverity::Info,
+            visibility: trace::TraceVisibility::Auto,
+        });
+    }
+
     let warnings = parsed
         .warnings
         .into_iter()

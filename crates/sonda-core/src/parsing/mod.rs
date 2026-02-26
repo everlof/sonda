@@ -16,10 +16,18 @@ pub struct ParseWarning {
     pub reason: String,
 }
 
+/// A line that looked like substance data but could not be fully parsed.
+#[derive(Debug, Clone)]
+pub struct SkippedLine {
+    pub line_text: String,
+    pub reason: String,
+}
+
 #[derive(Debug, Clone)]
 pub struct ParsedReports {
     pub reports: Vec<AnalysisReport>,
     pub warnings: Vec<ParseWarning>,
+    pub skipped_lines: Vec<SkippedLine>,
 }
 
 /// Parse extracted page content into one or more AnalysisReports.
@@ -43,9 +51,13 @@ pub fn parse_reports(pages: &[PageContent]) -> Result<ParsedReports, SondaError>
 
     let mut reports = Vec::new();
     let mut warnings = Vec::new();
+    let mut skipped_lines: Vec<SkippedLine> = Vec::new();
     for (idx, section) in sections.iter().enumerate() {
         match parse_section(section) {
-            Ok(report) => reports.push(report),
+            Ok((report, section_skipped)) => {
+                skipped_lines.extend(section_skipped);
+                reports.push(report);
+            }
             Err(err) => {
                 // Keep parsing remaining sections and surface explicit warnings.
                 let header_lines: Vec<&str> = section.iter().take(30).copied().collect();
@@ -71,7 +83,11 @@ pub fn parse_reports(pages: &[PageContent]) -> Result<ParsedReports, SondaError>
         ));
     }
 
-    Ok(ParsedReports { reports, warnings })
+    Ok(ParsedReports {
+        reports,
+        warnings,
+        skipped_lines,
+    })
 }
 
 /// Split lines into sections, each starting at an "Analysrapport" header.
@@ -106,13 +122,13 @@ fn split_into_sections<'a>(lines: &[&'a str]) -> Vec<Vec<&'a str>> {
 }
 
 /// Parse a single section (one sample) into an AnalysisReport.
-fn parse_section(lines: &[&str]) -> Result<AnalysisReport, SondaError> {
+fn parse_section(lines: &[&str]) -> Result<(AnalysisReport, Vec<SkippedLine>), SondaError> {
     // Parse header from the first ~30 lines of this section
     let header_lines: Vec<&str> = lines.iter().take(30).copied().collect();
     let header = parse_header(&header_lines);
 
     // Find and parse table rows
-    let rows = parse_table_rows(lines)?;
+    let (rows, skipped) = parse_table_rows(lines)?;
 
     if rows.is_empty() {
         return Err(SondaError::ParseError(
@@ -120,12 +136,13 @@ fn parse_section(lines: &[&str]) -> Result<AnalysisReport, SondaError> {
         ));
     }
 
-    Ok(AnalysisReport { header, rows })
+    Ok((AnalysisReport { header, rows }, skipped))
 }
 
 /// Parse table rows from text lines.
-fn parse_table_rows(lines: &[&str]) -> Result<Vec<AnalysisRow>, SondaError> {
+fn parse_table_rows(lines: &[&str]) -> Result<(Vec<AnalysisRow>, Vec<SkippedLine>), SondaError> {
     let mut rows = Vec::new();
+    let mut skipped = Vec::new();
 
     for line in lines {
         let line = line.trim();
@@ -133,66 +150,87 @@ fn parse_table_rows(lines: &[&str]) -> Result<Vec<AnalysisRow>, SondaError> {
             continue;
         }
 
-        if let Some(row) = try_parse_row(line) {
-            rows.push(row);
+        match try_parse_row(line) {
+            Ok(Some(row)) => rows.push(row),
+            Ok(None) => {}
+            Err(skip) => skipped.push(skip),
         }
     }
 
-    Ok(rows)
+    Ok((rows, skipped))
 }
 
 /// Try to parse a single line as a substance row.
 ///
-/// Returns None if the line doesn't look like a data row.
-fn try_parse_row(line: &str) -> Option<AnalysisRow> {
+/// Returns `Ok(None)` for lines that clearly aren't data rows (too short,
+/// header words, non-alphabetic start). Returns `Err(SkippedLine)` for lines
+/// that look like substance data but have no parseable value.
+fn try_parse_row(line: &str) -> Result<Option<AnalysisRow>, SkippedLine> {
     // Split the line into segments by large whitespace gaps (2+ spaces)
     let segments: Vec<&str> = split_by_whitespace_gaps(line);
 
     if segments.len() < 2 {
-        return None;
+        return Ok(None);
     }
 
     // The first segment should be the substance name (must start with a letter)
     let name = segments[0].trim();
-    if name.is_empty() || !name.chars().next()?.is_alphabetic() {
-        return None;
+    if name.is_empty()
+        || !name
+            .chars()
+            .next()
+            .map(|c| c.is_alphabetic())
+            .unwrap_or(false)
+    {
+        return Ok(None);
     }
 
     // Skip header-like lines
     let name_lower = name.to_lowercase();
     if is_header_word(&name_lower) {
-        return None;
+        return Ok(None);
     }
 
     // Look for a value in subsequent segments
+    let mut last_err: Option<String> = None;
     for segment in &segments[1..] {
         let segment = segment.trim();
-        if let Ok(Some(value)) = parse_value(segment) {
-            let normalized = normalize_substance(name);
+        match parse_value(segment) {
+            Ok(Some(value)) => {
+                let normalized = normalize_substance(name);
 
-            // Try to detect unit from remaining segments
-            let unit = segments
-                .iter()
-                .find_map(|s| {
-                    let s = s.trim().to_lowercase();
-                    if s.contains("mg/kg") {
-                        Some(Unit::from_str_loose(&s))
-                    } else {
-                        None
-                    }
-                })
-                .unwrap_or_default();
+                // Try to detect unit from remaining segments
+                let unit = segments
+                    .iter()
+                    .find_map(|s| {
+                        let s = s.trim().to_lowercase();
+                        if s.contains("mg/kg") {
+                            Some(Unit::from_str_loose(&s))
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap_or_default();
 
-            return Some(AnalysisRow {
-                raw_name: name.to_string(),
-                normalized_name: normalized,
-                value,
-                unit,
-            });
+                return Ok(Some(AnalysisRow {
+                    raw_name: name.to_string(),
+                    normalized_name: normalized,
+                    value,
+                    unit,
+                }));
+            }
+            Ok(None) => {}
+            Err(e) => {
+                last_err = Some(format!("{}", e));
+            }
         }
     }
 
-    None
+    let reason = last_err.unwrap_or_else(|| "no parseable numeric value found".to_string());
+    Err(SkippedLine {
+        line_text: line.to_string(),
+        reason,
+    })
 }
 
 /// Split a line by gaps of 2+ whitespace characters.
@@ -265,21 +303,35 @@ mod tests {
 
     #[test]
     fn test_try_parse_measured_row() {
-        let row = try_parse_row("Arsenik (As)     68     mg/kg TS").unwrap();
+        let row = try_parse_row("Arsenik (As)     68     mg/kg TS")
+            .unwrap()
+            .unwrap();
         assert_eq!(row.normalized_name, "arsenik");
         assert_eq!(row.value, AnalysisValue::Measured(dec!(68)));
     }
 
     #[test]
     fn test_try_parse_below_detection_row() {
-        let row = try_parse_row("Kvicksilver (Hg)     < 0.030     mg/kg TS").unwrap();
+        let row = try_parse_row("Kvicksilver (Hg)     < 0.030     mg/kg TS")
+            .unwrap()
+            .unwrap();
         assert_eq!(row.normalized_name, "kvicksilver");
         assert_eq!(row.value, AnalysisValue::BelowDetection(dec!(0.030)));
     }
 
     #[test]
     fn test_header_line_skipped() {
-        assert!(try_parse_row("Analys     Resultat     Enhet").is_none());
+        assert!(try_parse_row("Analys     Resultat     Enhet")
+            .unwrap()
+            .is_none());
+    }
+
+    #[test]
+    fn test_unparseable_value_returns_skipped() {
+        let result = try_parse_row("Bly (Pb)     n.d.     mg/kg TS");
+        assert!(result.is_err());
+        let skip = result.unwrap_err();
+        assert!(skip.reason.contains("invalid number"));
     }
 
     #[test]

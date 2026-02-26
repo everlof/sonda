@@ -130,114 +130,96 @@ fn extract_bbox_lines(pdf_path: &std::path::Path) -> Result<Vec<BBoxLine>, Sonda
 }
 
 fn parse_bbox_xml(xml: &str) -> Vec<BBoxLine> {
-    let mut out = Vec::new();
-    let mut cursor = 0usize;
-    let mut page_seq = 0usize;
-    while let Some(page_pos_rel) = xml[cursor..].find("<page ") {
-        page_seq += 1;
-        let page_pos = cursor + page_pos_rel;
-        let page_tag_end = match xml[page_pos..].find('>') {
-            Some(v) => page_pos + v,
-            None => break,
-        };
-        let page_tag = &xml[page_pos..=page_tag_end];
-        let current_page = parse_attr_usize(page_tag, "number").unwrap_or(page_seq);
+    use quick_xml::events::Event;
+    use quick_xml::Reader;
 
-        let page_close = match xml[page_tag_end + 1..].find("</page>") {
-            Some(v) => page_tag_end + 1 + v,
-            None => break,
-        };
-        let page_body = &xml[page_tag_end + 1..page_close];
+    let mut reader = Reader::from_str(xml);
+    reader.config_mut().trim_text(true);
 
-        let mut line_cursor = 0usize;
-        while let Some(line_pos_rel) = page_body[line_cursor..].find("<line ") {
-            let line_pos = line_cursor + line_pos_rel;
-            let line_tag_end = match page_body[line_pos..].find('>') {
-                Some(v) => line_pos + v,
-                None => break,
-            };
-            let line_open_tag = &page_body[line_pos..=line_tag_end];
+    let mut out: Vec<BBoxLine> = Vec::new();
+    let mut page_seq: usize = 0;
+    let mut current_page: usize = 0;
+    let mut in_line = false;
+    let mut line_bbox: Option<BBox> = None;
+    let mut current_words: Vec<String> = Vec::new();
+    let mut in_word = false;
 
-            let line_close_rel = match page_body[line_tag_end + 1..].find("</line>") {
-                Some(v) => v,
-                None => break,
-            };
-            let line_close = line_tag_end + 1 + line_close_rel;
-            let line_body = &page_body[line_tag_end + 1..line_close];
-
-            let bbox = parse_bbox(line_open_tag);
-            let mut words = Vec::new();
-            let mut word_cursor = 0usize;
-            while let Some(word_pos_rel) = line_body[word_cursor..].find("<word ") {
-                let word_pos = word_cursor + word_pos_rel;
-                let word_tag_end = match line_body[word_pos..].find('>') {
-                    Some(v) => word_pos + v,
-                    None => break,
-                };
-                let word_close_rel = match line_body[word_tag_end + 1..].find("</word>") {
-                    Some(v) => v,
-                    None => break,
-                };
-                let word_close = word_tag_end + 1 + word_close_rel;
-                let word_text = &line_body[word_tag_end + 1..word_close];
-                let word = decode_xml_entities(word_text).trim().to_string();
-                if !word.is_empty() {
-                    words.push(word);
+    loop {
+        match reader.read_event() {
+            Ok(Event::Start(ref e)) => match e.local_name().as_ref() {
+                b"page" => {
+                    page_seq += 1;
+                    current_page = attr_usize(e, b"number").unwrap_or(page_seq);
                 }
-                word_cursor = word_close + "</word>".len();
-            }
-
-            if let Some(bbox) = bbox {
-                let text = words.join(" ");
-                if !text.is_empty() {
-                    out.push(BBoxLine {
-                        page_number: current_page,
-                        text,
-                        bbox,
-                    });
+                b"line" => {
+                    in_line = true;
+                    line_bbox = attr_bbox(e);
+                    current_words.clear();
+                }
+                b"word" if in_line => {
+                    in_word = true;
+                }
+                _ => {}
+            },
+            Ok(Event::Text(ref e)) if in_word => {
+                if let Ok(text) = e.unescape() {
+                    let trimmed = text.trim().to_string();
+                    if !trimmed.is_empty() {
+                        current_words.push(trimmed);
+                    }
                 }
             }
-
-            line_cursor = line_close + "</line>".len();
+            Ok(Event::End(ref e)) => match e.local_name().as_ref() {
+                b"word" => {
+                    in_word = false;
+                }
+                b"line" => {
+                    if let Some(bbox) = line_bbox.take() {
+                        let text = current_words.join(" ");
+                        if !text.is_empty() {
+                            out.push(BBoxLine {
+                                page_number: current_page,
+                                text,
+                                bbox,
+                            });
+                        }
+                    }
+                    current_words.clear();
+                    in_line = false;
+                    in_word = false;
+                }
+                _ => {}
+            },
+            Ok(Event::Eof) => break,
+            Err(_) => break,
+            _ => {}
         }
-
-        cursor = page_close + "</page>".len();
     }
 
     out
 }
 
-fn parse_attr_usize(tag: &str, name: &str) -> Option<usize> {
-    parse_attr(tag, name)?.parse().ok()
+fn attr_f32(e: &quick_xml::events::BytesStart<'_>, name: &[u8]) -> Option<f32> {
+    e.attributes()
+        .filter_map(|a| a.ok())
+        .find(|a| a.key.local_name().as_ref() == name)
+        .and_then(|a| std::str::from_utf8(&a.value).ok()?.parse().ok())
 }
 
-fn parse_attr_f32(tag: &str, name: &str) -> Option<f32> {
-    parse_attr(tag, name)?.parse().ok()
+fn attr_usize(e: &quick_xml::events::BytesStart<'_>, name: &[u8]) -> Option<usize> {
+    e.attributes()
+        .filter_map(|a| a.ok())
+        .find(|a| a.key.local_name().as_ref() == name)
+        .and_then(|a| std::str::from_utf8(&a.value).ok()?.parse().ok())
 }
 
-fn parse_attr<'a>(tag: &'a str, name: &str) -> Option<&'a str> {
-    let needle = format!("{}=\"", name);
-    let start = tag.find(&needle)? + needle.len();
-    let rest = &tag[start..];
-    let end = rest.find('"')?;
-    Some(&rest[..end])
-}
-
-fn parse_bbox(line_tag: &str) -> Option<BBox> {
+fn attr_bbox(e: &quick_xml::events::BytesStart<'_>) -> Option<BBox> {
     Some(BBox {
-        x_min: parse_attr_f32(line_tag, "xMin")?,
-        y_min: parse_attr_f32(line_tag, "yMin")?,
-        x_max: parse_attr_f32(line_tag, "xMax")?,
-        y_max: parse_attr_f32(line_tag, "yMax")?,
+        x_min: attr_f32(e, b"xMin")?,
+        y_min: attr_f32(e, b"yMin")?,
+        x_max: attr_f32(e, b"xMax")?,
+        y_max: attr_f32(e, b"yMax")?,
     })
-}
-
-fn decode_xml_entities(s: &str) -> String {
-    s.replace("&amp;", "&")
-        .replace("&lt;", "<")
-        .replace("&gt;", ">")
-        .replace("&quot;", "\"")
-        .replace("&apos;", "'")
 }
 
 #[cfg(test)]
